@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gridded Ocean Biogeochemistry from Artificial Intelligence (GOBAI) - GOBAI-O2</title>
+
+<link rel="icon" type="image/png" href="https://www.pmel.noaa.gov/gobai/favicon-32.png">
+<link href="https://www.pmel.noaa.gov/gobai/gobai.css" rel="stylesheet" type="text/css">
+</head>
+
+<body>
+<header><a class="skip-link" href="#main-content">Skip to content</a>
+	<div id="header-content">
+		<div class="noaa-logo"><a href="https://www.noaa.gov/" target="_blank"><img src="https://www.pmel.noaa.gov/gobai/images/noaa_logo.png" alt="NOAA logo"></a></div>
+		<div class="pmel-logo"><a href="https://www.pmel.noaa.gov/" target="_blank"><img src="https://www.pmel.noaa.gov/gobai/images/PMEL_logo.png" alt="PMEL logo"></a></div>
+		<h1 class="site-name">GOBAI: Gridded Ocean Biogeochemistry from Artificial Intelligence </h1>
+	</div>
+</header>
+<!--<nav><a href="../index.html">Home</a></nav>-->
+<main>
+	<div id="main-content"> <!-- InstanceBeginEditable name="MainContent" -->
+		<h2>GOBAI-O<sub>2</sub></h2>
+		<p>Jonathan D. Sharp, Andrea J. Fassbender, Brendan R. Carter, Gregory C. Johnson, John P. Dunne, and Cristina Schultz</p>
+		<h3>About</h3>
+		<p>GOBAI-O<sub>2</sub> is a gridded data product that provides three-dimensional monthly fields of dissolved oxygen in the global ocean. It was constructed by training machine learning algorithms with observations of oxygen concentration ([O<sub>2</sub>]) from discrete shipboard measurements and autonomous sensors on biogeochemical Argo floats, then applying those machine learning algorithms to three-dimensional monthly gridded fields of temperature and salinity. The algorithms used to produce GOBAI-O<sub>2</sub> have been validated using real observations and synthetic data from model output, and the data product itself has been compared against the World Ocean Atlas and selected discrete measurements. Results of these validation and comparison exercises are detailed in <a href="https://doi.org/10.5194/essd-15-4481-2023" target="_blank">Sharp et al. (2023)</a>.</p>
+		<div class="video-ani clearfix">
+			<div>
+				<video controls>
+					<source src="https://www.pmel.noaa.gov/gobai/animations/O2_by_month_20Dbar_v2.2.mp4" type="video/mp4">
+					Your browser does not support the video tag. <a href="https://www.pmel.noaa.gov/gobai/animations/O2_by_month_20Dbar_v2.2.mp4">Download the file</a> </video>
+			</div>
+			<div>
+				<video controls>
+					<source src="https://www.pmel.noaa.gov/gobai/animations/O2_by_month_200Dbar_v2.2.mp4" type="video/mp4">
+					Your browser does not support the video tag. <a href="https://www.pmel.noaa.gov/gobai/animations/O2_by_month_200Dbar_v2.2.mp4">Download the file</a> </video>
+			</div>
+			<div>
+				<video controls>
+					<source src="https://www.pmel.noaa.gov/gobai/animations/O2_by_month_500dbar_v2.2.mp4" type="video/mp4">
+					Your browser does not support the video tag. <a href="https://www.pmel.noaa.gov/gobai/animations/O2_by_month_500dbar_v2.2.mp4">Download the file</a> </video>
+			</div>
+			<div>
+				<video controls>
+					<source src="https://www.pmel.noaa.gov/gobai/animations/O2_by_month_1500dbar_v2.2.mp4" type="video/mp4">
+					Your browser does not support the video tag. <a href="https://www.pmel.noaa.gov/gobai/animations/O2_by_month_1500dbar_v2.2.mp4">Download the file</a> </video>
+			</div>
+		</div>
+		<h3>Access</h3>
+		<p>GOBAI-O<sub>2</sub> can be accessed from NOAA's National Centers for Environmental Information at <a href="https://accession.nodc.noaa.gov/0259304" target="_blank">https://accession.nodc.noaa.gov/0259304</a> (doi: 10.25921/z72m-yz67). Netcdfs nd cloud-native access via icechunk are available on <a href="https://console.cloud.google.com/storage/browser/noaa-oar-gobai" target="_blank">Google storage</a> via the <a href="https://www.noaa.gov/information-technology/open-data-dissemination" target="_blank">NOAA NODD program</a>.</p>
+		<h3>Acknowledging use</h3>
+		<p>Please include the data product citation shown below when using GOBAI-O<sub>2</sub>. In addition, the GOBAI-O<sub>2</sub> manuscript published in <i>Earth System Science Data</i> may also be cited.</p>
+		<h3>Data product citation</h3>
+		<p>Sharp, J. D., Fassbender, A. J., Carter, B. R., Johnson, G. C., Schultz, C., Dunne, J. P. (2022). GOBAI-O<sub>2</sub>: A Global Gridded Monthly Dataset of Ocean Interior Dissolved Oxygen Concentrations Based on Shipboard and Autonomous Observations (NCEI Accession 0259304).  NOAA National Centers for Environmental Information. Dataset. <a href="https://doi.org/10.25921/z72m-yz67" target="_blank">https://doi.org/10.25921/z72m-yz67</a>.</p>
+		<h3>Manuscript citation</h3>
+		<p>Sharp, J. D., Fassbender, A. J., Carter, B. R., Johnson, G. C., Schultz, C., Dunne, J. P. (2023). GOBAI-O<sub>2</sub>: temporally and spatially resolved fields of ocean interior dissolved oxygen over nearly 2 decades. <i>Earth System Science Data</i>, 15 (10), 4481 - 4518,. <a href="https://doi.org/10.5194/essd-15-4481-2023" target="_blank">https://doi.org/10.5194/essd-15-4481-2023</a>.</p>
+		<p class="display-it"><b>Contact:</b> <a href="mailto:jonathan.sharp@noaa.gov">jonathan.sharp@noaa.gov</a> | <a href="mailto:oar.pmel.gobop@noaa.gov">oar.pmel.gobop@noaa.gov</a></p>
+		<script>
+	new Freezeframe({
+		selector: '.ani-maps',	// CSS class of animated image
+		trigger: 'click',		// Click image to play/pause animation
+		responsive: false		// Whether or not to make the image responsive (100% width) (controlling in CSS)
+	});
+</script> 
+		<!-- InstanceEndEditable --> </div>
+</main>
+<footer>
+	<div class="footer-content">
+		<p><a href="https://www.noaa.gov" target="_blank">National Oceanic and Atmospheric Administration</a><br>
+			<a href="https://www.pmel.noaa.gov/" target="_blank">Pacific Marine Environmental Laboratory</a> </p>
+		<p>Contact: <a href="mailto:jonathan.sharp@noaa.gov">jonathan.sharp@noaa.gov</a> | <a href="mailto:oar.pmel.gobop@noaa.gov">oar.pmel.gobop@noaa.gov</a></p>
+	</div>
+	<div class="required-links"><a href="https://www.commerce.gov/" target="_blank">DOC</a> | <a href="https://www.noaa.gov/" target="_blank">NOAA</a> | <a href="https://research.noaa.gov/" target="_blank">OAR</a> | <a href="https://www.pmel.noaa.gov/" target="_blank">PMEL</a> | <a href="https://www.noaa.gov/protecting-your-privacy" target="_blank">Privacy Policy</a> | <a href="https://www.noaa.gov/disclaimer" target="_blank">Disclaimer</a></div>
+</footer>
+</body>
+</html>
