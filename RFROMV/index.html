@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Random Forest Regression Ocean Maps (RFROM)</title>
+
+<link rel="icon" type="image/png" href="https://www.pmel.noaa.gov/gobai/favicon-32.png">
+<link href="https://www.pmel.noaa.gov/gobai/gobai.css" rel="stylesheet" type="text/css">
+</head>
+
+<body>
+<header><a class="skip-link" href="#main-content">Skip to content</a>
+	<div id="header-content">
+		<div class="noaa-logo"><a href="https://www.noaa.gov/" target="_blank"><img src="https://www.pmel.noaa.gov/gobai/images/noaa_logo.png" alt="NOAA logo"></a></div>
+		<div class="pmel-logo"><a href="https://www.pmel.noaa.gov/" target="_blank"><img src="https://www.pmel.noaa.gov/gobai/images/PMEL_logo.png" alt="PMEL logo"></a></div>
+		<h1 class="site-name">RFROM: Random Forest Regression Ocean Maps</h1>
+	</div>
+</header>
+<!--<nav><a href="../index.html">Home</a></nav>-->
+<main>
+	<div id="main-content"> <!-- InstanceBeginEditable name="MainContent" -->
+		<h2>About RFROM</h2>
+		<p><a href="mailto:john.lyman@noaa.gov">John M. Lyman</a> and <a href="mailto:gregory.c.johnson@noaa.gov">Gregory C. Johnson</a></p>
+		<p>RFROM is a collection of Random Forest Regression Ocean Maps. These maps are computed from random forests constructed in different ocean basins. The maps are trained on ocean profiles of temperature and salinity measurements from the surface to 2000 m. RFROM uses satellite sea surface height (SSH), satellite sea surface temperature (SST), time, latitude, and longitude as predictors for temperature maps and ocean heat content maps. It adds the temperature maps as an additional predictor for salinity maps. The results are near-global &#188;-degree x &#188;-degree x 7-day resolution maps of temperature and salinity on 58 different depth layers, along with ocean heat content anomaly on 10 different layers.</p>
+		<p>The temperature and salinity profile data come from the <a href="https://www.metoffice.gov.uk/hadobs/en4/download-en4-2-2.html" target="_blank">UK Met Office Hadley Centre (EN.4.2.2)</a> and the <a href="https://argo.ucsd.edu/" target="_blank">Argo Program</a>, SSH delayed-mode maps from the Copernicus Marine Environment Monitoring Service (<a href="https://doi.org/10.48670/moi-00148" target="_blank">SEALEVEL_GLO_PHY_L4_MY_008_047</a>) and SST maps from NOAA (<a href="https://psl.noaa.gov/data/gridded/data.noaa.oisst.v2.highres.html" target="_blank">OISST V2.1</a>). Real time maps use real time SSH (<a href="https://data.marine.copernicus.eu/product/SEALEVEL_GLO_PHY_L4_NRT_008_046/description" target="_blank">SEALEVEL_GLO_PHY_L4_NRT_008_046</a>) where delayed mode SSH is not available.</p>
+		<p style="text-align: center;"><b>0-2000 m Ocean Heat Content Relative to 1993-2022 Mean</b></p>
+		<div style="text-align: center; margin: 50px auto; max-width: 600px;">
+			<video controls playsinline poster="https://www.pmel.noaa.gov/rfrom/images/ani-screenshot-2024-02-14.jpg" style="width: 100%; max-width: 550px;">
+				<source src="https://www.pmel.noaa.gov/rfrom/ohca_0_2000_v22_2024.mp4" type="video/mp4">
+			</video>
+		</div>
+		<p style="text-align: center;">Download animation: <a href="https://www.pmel.noaa.gov/rfrom/ohca_0_2000_v22_2024.mp4">mp4</a> (78.62 MB)</p>
+		<p>RFROM is described in the papers below:</p>
+		<p>Lyman, J. M. and G. C. Johnson, 2023: Global High-Resolution Random Forest Regression Maps of Ocean Heat Content Anomalies Using in Situ and Satellite Data. <i>J. Atmos. Oceanic Tech.</i>, DOI: 10.1175/JTECH-D-22-0058.1.</p>
+		<p>Lyman, J. M. and G. C. Johnson. 2026. High Resolution Random Forest Regression Ocean Maps (RFROM) of Temperature and Salinity, Submitted Journal of Geophysical Research &#8211; Machine Learning and Computation.</p>
+		<p>RFROM V2.2 follows the original methodology described in the paper above, with the following improvements.</p>
+		<ol>
+			<li>SST is only used as a predictor in the upper 200 m, where it is important.</li>
+			<li>To reduce spatial artifacts, four random forest models are made for each depth level. These models use 5&deg; x 5&deg; degree tiles instead of exact latitudes and longitudes as prediction variables. In a given tile longitudes and latitudes of profile positiions have been rounded to the center values of the tile. The center of the tiles in each of the four models differ so that the tiles are offset from one another and there is only 25% area overlap between any two models. When constructing the final maps, a weighted average of all four models is used. The weights are set by the distance to the center of a tile to point where the final map for that point is estimated.</li>
+			<li>The all-year model for a region was used for years after 2006 if data coverage was low for that year in the region being mapped.</li>
+			<li>The Sulu and Celebes Seas are now separate basins.</li>
+		</ol>
+		<p>RFROM V2.3 methods are described in Lyman and Johnson (2026).</p>
+		<p><i>Disclaimer:</i></p>
+		<p>Feel free to use RFROM for any non-commercial purposes, but do so at your own risk, we cannot take any liability on the use of RFROM.</p>
+		<p><i>Acknowledging use:</i></p>
+		<p>Please cite Lyman and Johnson (2023) when using RFROM.</p>
+		<p><b>Links to RFROM V2.3 data</b></p>
+		<ul>
+			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_temp/" target="_blank">Ocean temperature</a></li>
+			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_temp_realtime/" target="_blank">Real time ocean temperature</a></li>
+			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_temp_error/" target="_blank">Ocean temperature error</a></li>
+			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_sal/" target="_blank">Ocean salinity</a></li>
+			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_sal_realtime/" target="_blank">Real time ocean salinity</a></li>
+			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_sal_error/" target="_blank">Ocean salinity error</a></li>
+		</ul>
+		<p><b>Links to RFROM V2.2 data</b></p>
+		<ul>
+			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv22/" target="_blank">Ocean heat content</a></li>
+			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv22_realtime/" target="_blank">Real time ocean heat content</a></li>
+			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv22_error/" target="_blank">Ocean heat content error</a></li>
+			<li><a href="https://www.pmel.noaa.gov/rfrom/data/curve_RFROM_0_2000_OHCA_2026.nc" target="_blank">0-2000 m global OHCA curve</a></li>
+			<li><a href="https://www.pmel.noaa.gov/rfrom/data/curve_RFROM_0_700_OHCA_2026.nc">0-700 m global OHCA curve</a></li>
+		</ul>
+		<p><b>Link to RFROM V2.1 data</b></p>
+		<ul>
+			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv21_temp/" target="_blank">Ocean temperature</a><br>
+			</li>
+		</ul>
+		<!-- InstanceEndEditable --> </div>
+</main>
+<footer>
+	<div class="footer-content">
+		<p><a href="https://www.noaa.gov" target="_blank">National Oceanic and Atmospheric Administration</a><br>
+			<a href="https://www.pmel.noaa.gov/" target="_blank">Pacific Marine Environmental Laboratory</a> </p>
+		<p>Contact: <a href="mailto:john.lyman@noaa.gov">john.lyman@noaa.gov</a> </p>
+	</div>
+	<div class="required-links"><a href="https://www.commerce.gov/" target="_blank">DOC</a> | <a href="https://www.noaa.gov/" target="_blank">NOAA</a> | <a href="https://research.noaa.gov/" target="_blank">OAR</a> | <a href="https://www.pmel.noaa.gov/" target="_blank">PMEL</a> | <a href="https://www.noaa.gov/protecting-your-privacy" target="_blank">Privacy Policy</a> | <a href="https://www.noaa.gov/disclaimer" target="_blank">Disclaimer</a></div>
+</footer>
+</body>
+</html>
