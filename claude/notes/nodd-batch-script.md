@@ -41,11 +41,8 @@ realtime = 1 (49). Compute per stream from the live time axis — do not hardcod
    dataset is one continuous series spanning the whole stable+realtime period
    (confirms Eli: "temp_error has dates that include _temp and _temp_realtime").
    Don't assume error aligns block-for-block with stable.
-3. **Output-file naming for realtime.** The notebook builds output names from
-   `OUT_PREFIX` + block start/end dates. Decide whether realtime output files
-   should carry a `_REALTIME` marker in the *filename* or rely only on the
-   `temp_realtime/` directory to distinguish them. (They land in a separate
-   prefix regardless.) — OPEN DECISION.
+3. **Output-file naming for realtime — RESOLVED (see Decisions below):** mirror
+   the ERDDAP norm, `RFROMV23_{TEMP,SAL}_STABLE_<start>_<end>_REALTIME.nc`.
 
 ## CF metadata per stream (was flagged as a blocker — mostly resolved)
 
@@ -114,11 +111,58 @@ Scratch dirs and GCS auth are unchanged from the notebook config cell
 (`/home/jovyan/shared-public/rfromv-scratch`, ADC token at
 `~/.config/gcloud/application_default_credentials.json`).
 
-## Open decisions to raise with Eli before/while building
+## Decisions — RESOLVED 2026-09-02 (issue #5 build session)
 
-1. Should realtime **output filenames** include a `_REALTIME` marker, or is the
-   `temp_realtime/` prefix enough?
-2. Error-variable `standard_name`: omit, or use the `standard_error` modifier form?
-3. Confirm temperature is **conservative** (TEOS-10), not in-situ.
-4. Multi-VM granularity: is per-stream parallelism enough, or does he also want
-   to split one stream's blocks across VMs (argues for `--blocks` ranges)?
+Built `RFROMV/rfrom_nodd.py`. Decisions confirmed with Eli + verified on ERDDAP:
+
+1. **Realtime output filenames match the ERDDAP norm.** The realtime *monthly*
+   files on ERDDAP are `RFROMV23_TEMP_STABLE_2025_01_REALTIME.nc` — they KEEP the
+   `STABLE` token and APPEND `_REALTIME` (Eli's recollection of a `TEMP_REALTIME`
+   token was mistaken; verified via the `files/<id>/.csv` listing). Output blocks
+   mirror that: `RFROMV23_TEMP_STABLE_<start>_<end>_REALTIME.nc`.
+2. **Error `standard_name` uses the CF modifier form** (`<base> standard_error`).
+   `temp_error` → `sea_water_conservative_temperature standard_error`.
+   `sal_error` → `sea_water_absolute_salinity standard_error` — NOT practical:
+   its source Description says "RMS error on … absolute salinity (TEOS-10)" and
+   its units are `grams_per_kilogram`, so the absolute-salinity base is the
+   units-consistent CF choice (practical salinity is dimensionless/PSU).
+3. **Temperature is conservative (TEOS-10).** ERDDAP carries no `standard_name`
+   but the variable `Description` = "mapped ocean conservative temperature
+   (TEOS-10) …", so `sea_water_conservative_temperature` (a valid CF name) is
+   correct for `temp_*`. (For the record `sea_water_temperature`,
+   `_potential_temperature`, and `_conservative_temperature` are ALL CF-valid —
+   the source physics, not CF-validity, is what picked it.)
+4. **Multi-VM granularity: both.** Script is `--stream`-scoped AND supports
+   `--blocks 0-8` ranges so one stream can be split across VMs. Requires an
+   explicit `--stream` and an explicit `--blocks`/`--all`; idempotent skip via
+   `fs.exists(dest)` unless `--force`.
+
+Salinity oddity to remember: the main `ocean_salinity` var's own metadata
+(`standard_name=sea_water_practical_salinity`, `units=PSU`) is trusted over its
+Description ("absolute salinity TEOS-10"), so `sal_stable`/`sal_realtime` stay
+practical/PSU — but `sal_error` is on absolute salinity in g/kg (see #2). The
+main var and its error var genuinely disagree on which salinity they report;
+source units are preserved as-is.
+
+### The script — `RFROMV/rfrom_nodd.py`
+
+- `STREAMS` dict is the single place stream differences live (`dataset_id`,
+  `data_var`, `var_attrs`, `monthly_template`, `out_template`).
+- Functions mirror the notebook stages: `erddap_time_axis`, `make_file_blocks`,
+  `download`/`download_block`, `build_dataset` (open+slice+CF+rechunk+encoding),
+  `write_netcdf`, `process_block` (adds idempotency skip, upload, scratch clean).
+- CLI: `--stream <name>` (required) · `--blocks RANGE | --all` · `--version`
+  (default v2.3) · `--list` (print block plan, no download) · `--no-upload` ·
+  `--force` · `--keep-scratch`. Default cleans each block's scratch after upload
+  (boundary months re-download idempotently) to keep disk bounded.
+- Verified without downloading: `--list` for all streams reproduces the spec
+  table (block 0 name bit-identical to the notebook; realtime `_REALTIME` names;
+  sal_error 18 blocks → 2025-12-05), and HEAD on the generated monthly URLs for
+  the changed templates (realtime, error) returns 200.
+- NOT yet run end-to-end (a full block is ~30 GB download + bucket write) — that
+  is an interactive hub run, same as how the notebook was validated.
+
+### Still not in this cut
+
+Weekly realtime reconcile (`--mode reconcile` / `update_nodd.py`): re-download
+the moving realtime dataset and replace the affected tail block(s).

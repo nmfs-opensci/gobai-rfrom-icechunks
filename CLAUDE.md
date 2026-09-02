@@ -69,9 +69,20 @@ Stable runs 1993→2024 (1670 steps); error and realtime extend to 2025. Realtim
 monthly files keep the `STABLE` prefix but add a `_REALTIME` suffix; error files
 use an `_ERROR_` infix. `ocean_salinity` is practical salinity in PSU
 (`standard_name=sea_water_practical_salinity`) — do not mistake it for TEOS-10
-absolute salinity, though `ocean_salinity_error` is confusingly reported in g/kg.
-A future batch script (see `claude/notes/nodd-batch-script.md`) parameterizes the
-pipeline by stream; run one stream at a time.
+absolute salinity, though `ocean_salinity_error` is confusingly reported in g/kg
+(its CF `standard_name` uses the `sea_water_absolute_salinity standard_error`
+modifier form, matching its g/kg units rather than the practical-salinity base of
+the main variable; `ocean_temperature_error` uses
+`sea_water_conservative_temperature standard_error`).
+
+`RFROMV/rfrom_nodd.py` is the batch script form of the notebook (issue #5). Its
+`STREAMS` dict is the single place stream differences live. It requires an
+explicit `--stream` plus an explicit `--blocks RANGE` or `--all` — nothing is
+processed implicitly. Run one stream at a time (one VM per stream, or split a
+stream across VMs with disjoint `--blocks` ranges); it is idempotent (skips blocks
+already in the bucket unless `--force`). `--list` prints the block→monthly-file
+plan without downloading. See `claude/notes/nodd-batch-script.md` for the resolved
+design decisions.
 
 ### Two constraints that are easy to break
 
