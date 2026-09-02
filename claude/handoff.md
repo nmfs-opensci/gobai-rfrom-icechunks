@@ -7,7 +7,8 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 - Repo: `nmfs-opensci/gobai-rfrom-icechunks`, working on `/home/jovyan/gobai-rfrom-icechunks`.
 - Branch: `main` (task branch `rfromv-nodd-processing` merged via PR #4 and deleted).
-- No open GitHub issues.
+- Open issue #5: batch script to process all RFROM ERDDAP netCDFs → NODD (the
+  next major task; spec in `claude/notes/nodd-batch-script.md`).
 - Uncommitted/untracked: `CLAUDE.md` (new, from `/init`), `claude/` (new),
   `RFROMV/upload_to_nodd.ipynb` (Eli's — leave it alone).
 
