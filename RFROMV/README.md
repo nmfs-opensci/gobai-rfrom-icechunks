@@ -20,16 +20,21 @@ ERDDAP monthly netCDFs
 The 1670-step stable record splits into 17 blocks; output files are named e.g.
 `RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc`.
 
-## The six product streams
+## The six product streams (RFROM v2.3)
 
-| stream | ERDDAP dataset_id | data variable | units |
-|---|---|---|---|
-| `temp_stable`   | `argo_rfromv23_temp`          | `ocean_temperature`       | degree_Celsius |
-| `temp_realtime` | `argo_rfromv23_temp_realtime` | `ocean_temperature`       | degree_Celsius |
-| `temp_error`    | `argo_rfromv23_temp_error`    | `ocean_temperature_error` | degree_Celsius |
-| `sal_stable`    | `argo_rfromv23_sal`           | `ocean_salinity`          | g/kg † |
-| `sal_realtime`  | `argo_rfromv23_sal_realtime`  | `ocean_salinity`          | g/kg † |
-| `sal_error`     | `argo_rfromv23_sal_error`     | `ocean_salinity_error`    | grams_per_kilogram |
+These are the current **v2.3** products, published under `netcdf/v2.3/` in the
+bucket. New versions reprocess all data into a new `netcdf/<version>/` tree; the
+script's `--version` flag (default `v2.3`) sets the prefix. Each ERDDAP
+dataset_id below links to its griddap data-access page.
+
+| stream | version | ERDDAP dataset | data variable | units |
+|---|---|---|---|---|
+| `temp_stable`   | v2.3 | [`argo_rfromv23_temp`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_temp.html)                   | `ocean_temperature`       | degree_Celsius |
+| `temp_realtime` | v2.3 | [`argo_rfromv23_temp_realtime`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_temp_realtime.html) | `ocean_temperature`       | degree_Celsius |
+| `temp_error`    | v2.3 | [`argo_rfromv23_temp_error`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_temp_error.html)       | `ocean_temperature_error` | degree_Celsius |
+| `sal_stable`    | v2.3 | [`argo_rfromv23_sal`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_sal.html)                     | `ocean_salinity`          | g/kg † |
+| `sal_realtime`  | v2.3 | [`argo_rfromv23_sal_realtime`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_sal_realtime.html)   | `ocean_salinity`          | g/kg † |
+| `sal_error`     | v2.3 | [`argo_rfromv23_sal_error`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_sal_error.html)         | `ocean_salinity_error`    | grams_per_kilogram |
 
 Stable runs 1993→2024 (1670 steps); error and realtime extend to 2025. Realtime
 is a moving draft that is eventually reprocessed into stable on a new version.
@@ -89,6 +94,10 @@ python rfrom_nodd.py --stream temp_stable --list
 
 # Process a single block and upload it.
 python rfrom_nodd.py --stream temp_stable --blocks 0
+
+# Process EVERY block in the stream and upload them (a typical production run,
+# one stream per VM). Idempotent: already-uploaded blocks are skipped.
+python rfrom_nodd.py --stream temp_stable --all
 
 # Split a stream across two VMs (disjoint block ranges).
 python rfrom_nodd.py --stream sal_stable --blocks 0-8      # VM A
