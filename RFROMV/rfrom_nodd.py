@@ -91,13 +91,14 @@ ERDDAP_GRIDDAP = "https://data.pmel.noaa.gov/pmel/erddap/griddap"
 # standard_name notes:                                                          #
 #   * Temperature: source Description says "conservative temperature (TEOS-10)" #
 #     -> sea_water_conservative_temperature (a valid CF standard name).         #
-#   * Salinity: the variable's own metadata is standard_name=                   #
-#     sea_water_practical_salinity, units=PSU, so we use that and preserve PSU   #
-#     -- even though the source *Description* says "absolute salinity (TEOS-10)".#
-#   * Error vars use the CF standard-name modifier form "<name> standard_error".#
-#     ocean_salinity_error is reported in g/kg and its Description says error on #
-#     ABSOLUTE salinity, so its modifier base is sea_water_absolute_salinity     #
-#     (units-consistent), not practical salinity.                               #
+#   * Salinity: the data are absolute salinity (TEOS-10) in g/kg -- confirmed   #
+#     by the data author. The ERDDAP variable metadata (standard_name=          #
+#     sea_water_practical_salinity, units=PSU) is a known upstream mistake      #
+#     the author cannot fix, so we override to sea_water_absolute_salinity /    #
+#     grams_per_kilogram (matching ocean_salinity_error). Values unchanged.     #
+#   * Error vars use the CF modifier form <name> standard_error.                #
+#     ocean_salinity_error is absolute salinity in g/kg, so its modifier base   #
+#     is sea_water_absolute_salinity (units-consistent).                        #
 # --------------------------------------------------------------------------- #
 
 STREAMS = {
@@ -135,8 +136,8 @@ STREAMS = {
         "dataset_id": "argo_rfromv23_sal",
         "data_var": "ocean_salinity",
         "var_attrs": {
-            "standard_name": "sea_water_practical_salinity",
-            "units": "PSU",
+            "standard_name": "sea_water_absolute_salinity",
+            "units": "grams_per_kilogram",
         },
         "monthly_template": "RFROMV23_SAL_STABLE_{year}_{month:02d}.nc",
         "out_template": "RFROMV23_SAL_STABLE_{start}_{end}.nc",
@@ -145,8 +146,8 @@ STREAMS = {
         "dataset_id": "argo_rfromv23_sal_realtime",
         "data_var": "ocean_salinity",
         "var_attrs": {
-            "standard_name": "sea_water_practical_salinity",
-            "units": "PSU",
+            "standard_name": "sea_water_absolute_salinity",
+            "units": "grams_per_kilogram",
         },
         "monthly_template": "RFROMV23_SAL_STABLE_{year}_{month:02d}_REALTIME.nc",
         "out_template": "RFROMV23_SAL_STABLE_{start}_{end}_REALTIME.nc",
