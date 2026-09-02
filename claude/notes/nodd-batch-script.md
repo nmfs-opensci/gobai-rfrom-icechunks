@@ -1,0 +1,124 @@
+# RFROMV NODD batch-processing script (next task)
+
+Goal: turn the tested single-file notebook
+`RFROMV/prep-one-netcdf-for-NODD.ipynb` into a script that processes **all**
+ERDDAP RFROM v2.3 files into NODD-bound netCDFs and uploads them to
+`gs://noaa-oar-rfrom/netcdf/v2.3/<stream>/`.
+
+**Operational requirement from Eli:** do NOT process all streams at once. He runs
+one stream at a time, likely on **multiple VMs in parallel (one VM per type)**.
+The script must therefore be **parameterized by stream** (and ideally by a block
+range within a stream) so each VM runs an independent slice with no coordination.
+Make it idempotent — skip work already uploaded — so a re-run or a second VM on
+the same stream is safe.
+
+## The six streams (all confirmed against ERDDAP, 2026-09-02)
+
+All datasets are PMEL ERDDAP griddap; files at
+`https://data.pmel.noaa.gov/pmel/erddap/files/<dataset_id>/`. Grid is
+`(time, mean_pressure, latitude, longitude)`, float32, and `mean_pressure_bnds`
+`(mean_pressure, nv)` bounds — same layout across all six.
+
+| stream | dataset_id | data var | units | ERDDAP standard_name | monthly file pattern | # files | # time steps | time extent | blocks* |
+|---|---|---|---|---|---|---|---|---|---|
+| `temp_stable`    | `argo_rfromv23_temp`          | `ocean_temperature`       | degree_Celsius     | (none)                        | `RFROMV23_TEMP_STABLE_YYYY_MM.nc`          | 384 | 1670 | 1993-01-01 → 2024-12-27 | 17 |
+| `temp_realtime`  | `argo_rfromv23_temp_realtime` | `ocean_temperature`       | degree_Celsius     | (none)                        | `RFROMV23_TEMP_STABLE_YYYY_MM_REALTIME.nc` | 12  | 49   | 2025-01-03 → 2025-12-05 | 1  |
+| `temp_error`     | `argo_rfromv23_temp_error`    | `ocean_temperature_error` | degree_Celsius     | (none)                        | `RFROMV23_TEMP_ERROR_YYYY_MM.nc`           | 396 | 1719 | 1993-01-01 → 2025-12-05 | 18 |
+| `sal_stable`     | `argo_rfromv23_sal`           | `ocean_salinity`          | PSU                | `sea_water_practical_salinity`| `RFROMV23_SAL_STABLE_YYYY_MM.nc`           | 384 | 1670 | 1993-01-01 → 2024-12-27 | 17 |
+| `sal_realtime`   | `argo_rfromv23_sal_realtime`  | `ocean_salinity`          | PSU                | `sea_water_practical_salinity`| `RFROMV23_SAL_STABLE_YYYY_MM_REALTIME.nc`  | 12  | 49   | 2025-01-03 → 2025-12-05 | 1  |
+| `sal_error`      | `argo_rfromv23_sal_error`     | `ocean_salinity_error`    | grams_per_kilogram | (none)                        | `RFROMV23_SAL_ERROR_YYYY_MM.nc`            | 396 | 1719 | 1993-01-01 → 2025-12-05 | 18 |
+
+\* blocks at BLOCK_SIZE=100: stable = 17 (16×100 + 70), error = 18 (17×100 + 19),
+realtime = 1 (49). Compute per stream from the live time axis — do not hardcode.
+
+### Things the table reveals (design-relevant)
+
+1. **Realtime filenames keep the `STABLE` prefix and add a `_REALTIME` suffix.**
+   The per-stream monthly-file builder in the notebook (`{MONTHLY_PREFIX}_{y}_{m:02d}.nc`)
+   must become stream-aware: error uses an `_ERROR_` infix, realtime appends
+   `_REALTIME`. Best to store a filename template per stream, not just a prefix.
+2. **Error and realtime run to 2025-12-05; stable stops at 2024-12-27.** The error
+   dataset is one continuous series spanning the whole stable+realtime period
+   (confirms Eli: "temp_error has dates that include _temp and _temp_realtime").
+   Don't assume error aligns block-for-block with stable.
+3. **Output-file naming for realtime.** The notebook builds output names from
+   `OUT_PREFIX` + block start/end dates. Decide whether realtime output files
+   should carry a `_REALTIME` marker in the *filename* or rely only on the
+   `temp_realtime/` directory to distinguish them. (They land in a separate
+   prefix regardless.) — OPEN DECISION.
+
+## CF metadata per stream (was flagged as a blocker — mostly resolved)
+
+- **Salinity standard_name is settled:** ERDDAP gives `ocean_salinity` units=`PSU`,
+  `standard_name=sea_water_practical_salinity`. Use that. The earlier worry (a
+  source *description* mentioning "absolute salinity TEOS-10") is contradicted by
+  the variable's own metadata — it is practical salinity in PSU. NOTE the oddity:
+  `ocean_salinity_error` is in `grams_per_kilogram` (g/kg = TEOS-10 absolute-salinity
+  units), i.e. the error var uses different units than the salinity var. Preserve
+  the source units as-is; just be aware they differ.
+- **Temperature standard_name:** ERDDAP carries none. The notebook set
+  `sea_water_conservative_temperature` for temp_stable (RFROM is TEOS-10 →
+  conservative temperature is the right call). Reuse it for temp_realtime.
+  **Still worth a one-line confirmation** that RFROM temperature is conservative,
+  not in-situ.
+- **Error variables (`*_error`):** no obvious CF standard_name. Options: omit
+  standard_name, or use the CF standard-name modifier form
+  (`sea_water_..._temperature standard_error`). Leaving standard_name off is
+  acceptable and safe. — MINOR OPEN DECISION.
+- Everything else (coord standard_names, `positive=down`/`axis=Z` on
+  mean_pressure, `Conventions="CF-1.10, ACDD-1.3"`, `clean_utf8` surrogate repair,
+  time `seconds since 1970-01-01`, no `_FillValue` on coords) is stream-agnostic —
+  copy from the notebook verbatim.
+
+## What to carry over from the notebook UNCHANGED (do not regress)
+
+These are the hard-won correctness/performance fixes — see
+`claude/notes/nodd-prep.md` for the why:
+
+- `open_mfdataset(..., engine="h5netcdf", combine="by_coords",
+  data_vars="minimal", coords="minimal", compat="override",
+  chunks={"mean_pressure": 1})` — preserves `mean_pressure_bnds` shape (does NOT
+  alter original data) AND reads contiguous pressure planes (avoids the I/O-bound
+  write that looked like OOM).
+- On-disk `chunksizes=(100,1,180,180)` capped at dim size for the short final
+  block; dask `dask_chunks` = full lat/lon plane per (time-block, pressure),
+  an exact multiple of the on-disk chunks.
+- Encoding: float32, `_FillValue=NaN`, `zlib=True, complevel=4, shuffle=True`
+  (drop to `complevel=1` if write time dominates the full run).
+- Download helper skips files already present at the right size.
+
+## Proposed script shape (for the build session to confirm)
+
+A single module + CLI, e.g. `RFROMV/rfrom_nodd.py`:
+
+- A `STREAMS` dict keyed by stream name, each holding: `dataset_id`, `data_var`,
+  `units`, `standard_name` (or None), monthly-filename template, output-prefix,
+  and the extra variable attrs. This is the ONE place stream differences live.
+- Core functions mirroring the notebook stages: `list_blocks(stream)`,
+  `download_block(...)`, `build_dataset(...)`, `write_netcdf(...)`,
+  `upload(...)`, all stream-parameterized.
+- CLI: `python rfrom_nodd.py --stream temp_stable [--blocks 0-4 | --blocks 3 | --all]
+  [--version v2.3] [--no-upload] [--keep-scratch]`. Default should require an
+  explicit `--stream` (never process everything implicitly).
+- **Idempotency / multi-VM friendliness:** before processing a block, check
+  whether its target object already exists in the bucket (`fs.exists(dest)`) and
+  skip unless `--force`. That makes it safe to run the same stream on two VMs, or
+  resume after interruption. Log clearly which blocks were skipped vs written.
+- **Weekly realtime reconcile (later):** realtime is a moving draft. A `--mode
+  reconcile` (or separate `update_nodd.py`) re-downloads the realtime dataset,
+  and re-writes/replaces the affected (tail) block(s), since the last realtime
+  block grows as new weeks arrive and old realtime eventually migrates into
+  stable on a new version. Keep this out of the first cut unless asked.
+
+Scratch dirs and GCS auth are unchanged from the notebook config cell
+(`/home/jovyan/shared-public/rfromv-scratch`, ADC token at
+`~/.config/gcloud/application_default_credentials.json`).
+
+## Open decisions to raise with Eli before/while building
+
+1. Should realtime **output filenames** include a `_REALTIME` marker, or is the
+   `temp_realtime/` prefix enough?
+2. Error-variable `standard_name`: omit, or use the `standard_error` modifier form?
+3. Confirm temperature is **conservative** (TEOS-10), not in-situ.
+4. Multi-VM granularity: is per-stream parallelism enough, or does he also want
+   to split one stream's blocks across VMs (argues for `--blocks` ranges)?
