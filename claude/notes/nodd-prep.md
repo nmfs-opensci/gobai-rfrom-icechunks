@@ -62,9 +62,13 @@ and the resolved standard_name/units details live in `nodd-batch-script.md`.
 Verified via `--list` + URL HEAD checks; not yet run end-to-end on the hub.
 
 Resolved open questions:
-- Salinity: trust the variable's own metadata → `sea_water_practical_salinity`,
-  PSU for the main var. `sal_error` is on absolute salinity (g/kg) →
-  `sea_water_absolute_salinity standard_error`.
+- Salinity: absolute salinity (TEOS-10) in g/kg for ALL salinity streams —
+  confirmed by the data author (2026-09-02). The ERDDAP metadata labels the main
+  var `sea_water_practical_salinity`/PSU, but that is a known upstream mistake he
+  cannot fix, so we override `sal_stable`/`sal_realtime` to
+  `sea_water_absolute_salinity` / `grams_per_kilogram` (values unchanged); `sal_error`
+  → `sea_water_absolute_salinity standard_error`, g/kg. (Earlier we had trusted the
+  ERDDAP PSU label — now reversed.)
 - Error datasets: `ocean_temperature_error` (degree_Celsius) and
   `ocean_salinity_error` (grams_per_kilogram); `_ERROR_` infix filenames; one
   continuous 1993→2025 series (18 blocks), no realtime split.

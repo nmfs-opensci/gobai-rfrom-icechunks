@@ -24,12 +24,18 @@ All datasets are PMEL ERDDAP griddap; files at
 | `temp_stable`    | `argo_rfromv23_temp`          | `ocean_temperature`       | degree_Celsius     | (none)                        | `RFROMV23_TEMP_STABLE_YYYY_MM.nc`          | 384 | 1670 | 1993-01-01 → 2024-12-27 | 17 |
 | `temp_realtime`  | `argo_rfromv23_temp_realtime` | `ocean_temperature`       | degree_Celsius     | (none)                        | `RFROMV23_TEMP_STABLE_YYYY_MM_REALTIME.nc` | 12  | 49   | 2025-01-03 → 2025-12-05 | 1  |
 | `temp_error`     | `argo_rfromv23_temp_error`    | `ocean_temperature_error` | degree_Celsius     | (none)                        | `RFROMV23_TEMP_ERROR_YYYY_MM.nc`           | 396 | 1719 | 1993-01-01 → 2025-12-05 | 18 |
-| `sal_stable`     | `argo_rfromv23_sal`           | `ocean_salinity`          | PSU                | `sea_water_practical_salinity`| `RFROMV23_SAL_STABLE_YYYY_MM.nc`           | 384 | 1670 | 1993-01-01 → 2024-12-27 | 17 |
-| `sal_realtime`   | `argo_rfromv23_sal_realtime`  | `ocean_salinity`          | PSU                | `sea_water_practical_salinity`| `RFROMV23_SAL_STABLE_YYYY_MM_REALTIME.nc`  | 12  | 49   | 2025-01-03 → 2025-12-05 | 1  |
+| `sal_stable`     | `argo_rfromv23_sal`           | `ocean_salinity`          | PSU †              | `sea_water_practical_salinity` †| `RFROMV23_SAL_STABLE_YYYY_MM.nc`           | 384 | 1670 | 1993-01-01 → 2024-12-27 | 17 |
+| `sal_realtime`   | `argo_rfromv23_sal_realtime`  | `ocean_salinity`          | PSU †              | `sea_water_practical_salinity` †| `RFROMV23_SAL_STABLE_YYYY_MM_REALTIME.nc`  | 12  | 49   | 2025-01-03 → 2025-12-05 | 1  |
 | `sal_error`      | `argo_rfromv23_sal_error`     | `ocean_salinity_error`    | grams_per_kilogram | (none)                        | `RFROMV23_SAL_ERROR_YYYY_MM.nc`            | 396 | 1719 | 1993-01-01 → 2025-12-05 | 18 |
 
 \* blocks at BLOCK_SIZE=100: stable = 17 (16×100 + 70), error = 18 (17×100 + 19),
 realtime = 1 (49). Compute per stream from the live time axis — do not hardcode.
+
+† These are the values ERDDAP *reports*, but they are wrong: the data author
+confirmed `ocean_salinity` is absolute salinity (TEOS-10) in g/kg. The
+PSU/practical label is a known upstream mistake he cannot fix, so the pipeline
+overrides `sal_stable`/`sal_realtime` output to `sea_water_absolute_salinity` /
+`grams_per_kilogram` (see the CF metadata section).
 
 ### Things the table reveals (design-relevant)
 
@@ -46,13 +52,16 @@ realtime = 1 (49). Compute per stream from the live time axis — do not hardcod
 
 ## CF metadata per stream (was flagged as a blocker — mostly resolved)
 
-- **Salinity standard_name is settled:** ERDDAP gives `ocean_salinity` units=`PSU`,
-  `standard_name=sea_water_practical_salinity`. Use that. The earlier worry (a
-  source *description* mentioning "absolute salinity TEOS-10") is contradicted by
-  the variable's own metadata — it is practical salinity in PSU. NOTE the oddity:
-  `ocean_salinity_error` is in `grams_per_kilogram` (g/kg = TEOS-10 absolute-salinity
-  units), i.e. the error var uses different units than the salinity var. Preserve
-  the source units as-is; just be aware they differ.
+- **Salinity is absolute salinity (TEOS-10) in g/kg — CORRECTED 2026-09-02.** The
+  data author confirmed `ocean_salinity` is absolute salinity (TEOS-10), g/kg. The
+  ERDDAP variable metadata (`units=PSU`, `standard_name=sea_water_practical_salinity`)
+  is a known upstream mistake he cannot fix ("I don't have direct control over the
+  ERDDAP file system"). So we OVERRIDE the main-var attrs to
+  `sea_water_absolute_salinity` / `grams_per_kilogram`, matching `ocean_salinity_error`
+  — all three salinity streams are now absolute/g/kg and internally consistent. Data
+  values are unchanged (metadata-only). NOTE this reverses the earlier decision to
+  trust the ERDDAP PSU label; the author's "absolute salinity TEOS-10" description was
+  right all along.
 - **Temperature standard_name:** ERDDAP carries none. The notebook set
   `sea_water_conservative_temperature` for temp_stable (RFROM is TEOS-10 →
   conservative temperature is the right call). Reuse it for temp_realtime.
@@ -137,12 +146,16 @@ Built `RFROMV/rfrom_nodd.py`. Decisions confirmed with Eli + verified on ERDDAP:
    explicit `--stream` and an explicit `--blocks`/`--all`; idempotent skip via
    `fs.exists(dest)` unless `--force`.
 
-Salinity oddity to remember: the main `ocean_salinity` var's own metadata
-(`standard_name=sea_water_practical_salinity`, `units=PSU`) is trusted over its
-Description ("absolute salinity TEOS-10"), so `sal_stable`/`sal_realtime` stay
-practical/PSU — but `sal_error` is on absolute salinity in g/kg (see #2). The
-main var and its error var genuinely disagree on which salinity they report;
-source units are preserved as-is.
+Salinity — CORRECTED 2026-09-02 (reverses an earlier call): ALL salinity streams
+are absolute salinity (TEOS-10) in g/kg. The data author confirmed `ocean_salinity`
+is absolute salinity g/kg ("It should be 'absolute salinity (TEOS-10)' which has
+units of g/kg … I don't have direct control over the ERDDAP file system and I
+hadn't realized the mistake"). ERDDAP's `sea_water_practical_salinity` / `PSU`
+label on the main var is therefore wrong. We OVERRIDE `sal_stable`/`sal_realtime`
+var_attrs to `sea_water_absolute_salinity` / `grams_per_kilogram` (was practical/PSU),
+so all three salinity streams are now internally consistent with `sal_error`. Data
+values are unchanged — metadata only. This supersedes the earlier "trust the ERDDAP
+variable metadata over its Description" reasoning: the Description was right.
 
 ### The script — `RFROMV/rfrom_nodd.py`
 

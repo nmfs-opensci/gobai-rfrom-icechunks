@@ -61,19 +61,21 @@ longitude)` float32):
 | `temp_stable`   | `argo_rfromv23_temp`          | `ocean_temperature`       | degree_Celsius |
 | `temp_realtime` | `argo_rfromv23_temp_realtime` | `ocean_temperature`       | degree_Celsius |
 | `temp_error`    | `argo_rfromv23_temp_error`    | `ocean_temperature_error` | degree_Celsius |
-| `sal_stable`    | `argo_rfromv23_sal`           | `ocean_salinity`          | PSU |
-| `sal_realtime`  | `argo_rfromv23_sal_realtime`  | `ocean_salinity`          | PSU |
+| `sal_stable`    | `argo_rfromv23_sal`           | `ocean_salinity`          | g/kg (see note) |
+| `sal_realtime`  | `argo_rfromv23_sal_realtime`  | `ocean_salinity`          | g/kg (see note) |
 | `sal_error`     | `argo_rfromv23_sal_error`     | `ocean_salinity_error`    | grams_per_kilogram |
 
 Stable runs 1993→2024 (1670 steps); error and realtime extend to 2025. Realtime
 monthly files keep the `STABLE` prefix but add a `_REALTIME` suffix; error files
-use an `_ERROR_` infix. `ocean_salinity` is practical salinity in PSU
-(`standard_name=sea_water_practical_salinity`) — do not mistake it for TEOS-10
-absolute salinity, though `ocean_salinity_error` is confusingly reported in g/kg
-(its CF `standard_name` uses the `sea_water_absolute_salinity standard_error`
-modifier form, matching its g/kg units rather than the practical-salinity base of
-the main variable; `ocean_temperature_error` uses
-`sea_water_conservative_temperature standard_error`).
+use an `_ERROR_` infix. `ocean_salinity` is **absolute salinity (TEOS-10) in
+g/kg**, confirmed by the data author. The ERDDAP variable metadata labels it
+`sea_water_practical_salinity` / `PSU`, but that is a known upstream mistake the
+author cannot fix, so the pipeline overrides `sal_stable`/`sal_realtime` to
+`sea_water_absolute_salinity` / `grams_per_kilogram` (values unchanged — metadata
+only), matching `ocean_salinity_error`. The error vars use the CF standard-name
+modifier form: `ocean_salinity_error` → `sea_water_absolute_salinity
+standard_error`, `ocean_temperature_error` → `sea_water_conservative_temperature
+standard_error`.
 
 `RFROMV/rfrom_nodd.py` is the batch script form of the notebook (issue #5). Its
 `STREAMS` dict is the single place stream differences live. It requires an
