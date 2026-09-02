@@ -21,10 +21,17 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 ## In progress / next
 
-- **NODD prep** (issue #1, DONE/merged): see `claude/notes/nodd-prep.md`.
-- **Next major task**: RFROM batch `.py` scripts. Blockers to resolve first are
-  listed at the bottom of `claude/notes/nodd-prep.md` (salinity standard_name
-  conflict; error-dataset variable/structure).
+- **NODD prep** (issue #1, DONE/merged): reference notebook
+  `RFROMV/prep-one-netcdf-for-NODD.ipynb`. Detail in `claude/notes/nodd-prep.md`.
+- **NEXT MAJOR TASK — RFROM batch script**: turn the notebook into a
+  stream-parameterized script that processes all six streams and uploads to NODD.
+  Full spec, the confirmed six-stream table (dataset ids, variables, units, file
+  patterns, time extents, block counts), the CF/standard_name resolutions, and
+  the open decisions are in **`claude/notes/nodd-batch-script.md`**. Key
+  operational constraint: run ONE stream at a time, likely one VM per type — so
+  the script must be `--stream`-parameterized and idempotent (skip already-uploaded
+  blocks). Streams: `temp_stable temp_realtime temp_error sal_stable sal_realtime
+  sal_error`.
 
 ## Follow-ups (not blocking)
 

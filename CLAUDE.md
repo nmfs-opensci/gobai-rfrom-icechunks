@@ -50,10 +50,28 @@ There are no test/build commands. Typical work:
 4. **Rechunk + compress**: on-disk chunks `(100,1,180,180)` ≈ 13 MB, dtype
    float32, zlib level 4 + shuffle.
 5. **Upload**: to a versioned per-stream prefix `netcdf/v2.3/<stream>/` in the
-   bucket. Streams: `temp_stable`, `temp_realtime`, `temp_error`, `sal_stable`,
-   `sal_realtime`, `sal_error`. Realtime is a draft that gets reprocessed into
-   stable over time; the downstream Icechunk store combines streams with a
-   stable/realtime flag.
+   bucket. Realtime is a draft that gets reprocessed into stable over time; the
+   downstream Icechunk store combines streams with a stable/realtime flag.
+
+The six streams map to six ERDDAP datasets (all `(time, mean_pressure, latitude,
+longitude)` float32):
+
+| stream | ERDDAP dataset_id | data variable | units |
+|---|---|---|---|
+| `temp_stable`   | `argo_rfromv23_temp`          | `ocean_temperature`       | degree_Celsius |
+| `temp_realtime` | `argo_rfromv23_temp_realtime` | `ocean_temperature`       | degree_Celsius |
+| `temp_error`    | `argo_rfromv23_temp_error`    | `ocean_temperature_error` | degree_Celsius |
+| `sal_stable`    | `argo_rfromv23_sal`           | `ocean_salinity`          | PSU |
+| `sal_realtime`  | `argo_rfromv23_sal_realtime`  | `ocean_salinity`          | PSU |
+| `sal_error`     | `argo_rfromv23_sal_error`     | `ocean_salinity_error`    | grams_per_kilogram |
+
+Stable runs 1993→2024 (1670 steps); error and realtime extend to 2025. Realtime
+monthly files keep the `STABLE` prefix but add a `_REALTIME` suffix; error files
+use an `_ERROR_` infix. `ocean_salinity` is practical salinity in PSU
+(`standard_name=sea_water_practical_salinity`) — do not mistake it for TEOS-10
+absolute salinity, though `ocean_salinity_error` is confusingly reported in g/kg.
+A future batch script (see `claude/notes/nodd-batch-script.md`) parameterizes the
+pipeline by stream; run one stream at a time.
 
 ### Two constraints that are easy to break
 
