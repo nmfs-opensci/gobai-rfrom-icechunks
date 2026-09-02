@@ -52,17 +52,23 @@ ERDDAP monthly netCDFs → `open_mfdataset` combine → select one 100-timestep 
 was cleaned of a stray test file. Auth: gcsfs +
 `/home/jovyan/.config/gcloud/application_default_credentials.json`.
 
-## Next major task: batch scripts
+## Batch script — DELIVERED (issue #5, 2026-09-02)
 
-Proposed:
-- `rfrom_nodd.py` — shared config/logic parameterized per stream.
-- `process_all.py` — all streams × all blocks.
-- `update_nodd.py` — weekly realtime reconcile (delete stale partial tail file,
-  upload new).
+`RFROMV/rfrom_nodd.py` — the notebook generalized to all six streams. `STREAMS`
+dict holds the per-stream differences; CLI is `--stream <name>` (required) +
+`--blocks RANGE | --all` (required) + `--version/--list/--no-upload/--force/
+--keep-scratch`. Idempotent (skip via `fs.exists`), multi-VM safe. Full decisions
+and the resolved standard_name/units details live in `nodd-batch-script.md`.
+Verified via `--list` + URL HEAD checks; not yet run end-to-end on the hub.
 
-Open questions to resolve **before** building the batch script:
-- Salinity `standard_name` conflict: source description says "absolute salinity
-  TEOS-10" but the standard_name is `sea_water_practical_salinity`, units PSU.
-  Confirm which is correct.
-- Error datasets (`argo_rfromv23_temp_error` / `_sal_error`): fetch the variable
-  name and structure — not yet inspected.
+Resolved open questions:
+- Salinity: trust the variable's own metadata → `sea_water_practical_salinity`,
+  PSU for the main var. `sal_error` is on absolute salinity (g/kg) →
+  `sea_water_absolute_salinity standard_error`.
+- Error datasets: `ocean_temperature_error` (degree_Celsius) and
+  `ocean_salinity_error` (grams_per_kilogram); `_ERROR_` infix filenames; one
+  continuous 1993→2025 series (18 blocks), no realtime split.
+
+Still open / next:
+- `update_nodd.py` — weekly realtime reconcile (re-download the moving realtime
+  dataset, replace the affected tail block(s)).
