@@ -179,8 +179,27 @@ tail block, the cheapest real test at 5 monthly files.
 - Re-running the same command skipped all five downloads in 0 s (idempotency),
   and `--blocks 18` / `--stream bogus` are rejected.
 
-Not yet run: any upload, and any `no3` block. Nothing has been written to
-`gs://noaa-oar-gobai`.
+## Validation (no3 block 17, run end to end 2026-09-03)
+
+Same method as `o2` block 17: `python nodd.py --stream no3 --blocks 17 --no-upload --keep-scratch`.
+
+- 5 files / 4.6 GB downloaded, output 1.38 GB, on-disk chunks `(19, 1, 180, 180)`.
+- **Data bit-identical to source**: coordinates, `mean_pressure_bnds`, and `no3`
+  values all `array_equal(..., equal_nan=True)` against the source files, compared
+  per-pressure-level to keep peak memory bounded (loading both full arrays at once
+  OOM-killed the process on this box — 30 GB RAM, no swap). `mean_pressure_bnds`
+  kept its `(mean_pressure, vertices)` shape, `_FillValue` suppressed on it as
+  expected, and `long_name` correctly promoted from the source `Description`.
+- **`cfchecker` 4.1.0: 0 errors, 0 warnings**, same known checker limitation on the
+  `Conventions = "CF-1.10, ACDD-1.3"` string as `o2` (confirmed by patching a
+  scratch copy's `Conventions` to `"CF-1.8"` and re-running — clean).
+- **CF mapping is provisional**: `no3` currently gets `standard_name =
+  moles_of_nitrate_per_unit_mass_in_sea_water`, matching this note's own proposal
+  above — but that's pending Sharp's reply on the per-volume/per-mass mismatch
+  (see `claude/handoff.md`). Don't treat this validation as sign-off on the final
+  CF name, only on the pipeline mechanics (chunking, bounds handling, bit-identity).
+
+Not yet run: any upload. Nothing has been written to `gs://noaa-oar-gobai`.
 
 ## Method note
 
