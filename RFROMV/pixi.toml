@@ -11,6 +11,9 @@ python = ">=3.11,<3.14"
 xarray = ">=2025.12.0"
 dask-core = ">=2025.11.0"
 h5netcdf = ">=1.7.3"
+# h5py is an optional extra of h5netcdf, not a hard dependency: without it the
+# engine has no HDF5 backend (GitHub issue #8). Pin it here, not implicitly.
+h5py = ">=3.12"
 gcsfs = ">=2025.12.0"
 pandas = ">=2.3.3"
 numpy = ">=2.3.5"

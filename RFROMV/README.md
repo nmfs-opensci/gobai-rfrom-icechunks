@@ -108,10 +108,17 @@ sudo apt-get update && sudo apt-get install -y git curl tmux
 ### 1. Python environment
 
 Python 3.11+ (3.12 is what the pipeline was validated on). The dependencies are
-`xarray`, `dask`, `h5netcdf`, `gcsfs`, `pandas`, `numpy`, `requests` — all of
-them ship prebuilt for Linux x86-64 and Apple Silicon either way you install, so
-there is no compiler or system HDF5 to set up; `h5netcdf` brings its own HDF5
-via `h5py`.
+`xarray`, `dask`, `h5netcdf`, `h5py`, `gcsfs`, `pandas`, `numpy`, `requests` —
+all of them ship prebuilt for Linux x86-64 and Apple Silicon either way you
+install, so there is no compiler or system HDF5 to set up; `h5py` is the wheel
+that carries HDF5.
+
+`h5py` is listed explicitly on purpose. It is an *optional extra* of `h5netcdf`
+(`h5netcdf[h5py]`), not a hard dependency, so installing `h5netcdf` alone gives
+you an engine with no HDF5 backend — which fails only on the first file open,
+after a block has already been downloaded (issue #8). Install from one of the
+manifests below rather than by hand and this is taken care of; `rfrom_nodd.py`
+also checks for it up front and exits before downloading anything.
 
 Three manifests are checked in, one per tool — `requirements.txt` (venv + pip),
 `pixi.toml` (pixi), `environment.yml` (conda/mamba). They declare the same
