@@ -27,8 +27,8 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 ## In progress / next
 
-- **ERDDAP download timeout + re-download** (issue #11, FIXED — PR #12 open,
-  branch `fix-erddap-download`). Both symptoms had one cause: the `requests.head()`
+- **ERDDAP download timeout + re-download** (issue #11, DONE — PR #12 merged,
+  `main` @ `a28b921`, branch deleted). Both symptoms had one cause: the `requests.head()`
   at the top of `download()`. ERDDAP's `/files/` endpoint serves these netCDFs
   `Content-Encoding: gzip` + `Transfer-Encoding: chunked`, so there is **no
   `Content-Length`** — the skip test `... and remote_size and ...` was dead code
