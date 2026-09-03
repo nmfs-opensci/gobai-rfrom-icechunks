@@ -6,13 +6,14 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 ## Repo state
 
 - Repo: `nmfs-opensci/gobai-rfrom-icechunks`, working on `/home/jovyan/gobai-rfrom-icechunks`.
-- Branch: `main`. **No open PRs.** PR #18 (`issue-16-cleanup-help-readme`, issue
-  #16) merged 2026-09-03; branch deleted, issue #16 auto-closed. PR #14
-  (`gobai-nodd-script`, issue #13) reviewed by Eli 2026-09-03 and merged earlier
-  the same day; branch deleted, issue #13 auto-closed. Every earlier task branch
-  (`rfromv-nodd-processing` #4, `rfromv-nodd-batch-script` #6, `local-mac-run`
-  #7, `scratch-dir-error` #9, `fix-h5py-dep` #10, `fix-erddap-download` #12) is
-  also merged and deleted.
+- Branch: `main`. **No open PRs.** PR #19 (`issue-15-cleanup-rfromv-notebooks`,
+  issue #15) merged 2026-09-03; branch deleted, issue #15 auto-closed. PR #18
+  (`issue-16-cleanup-help-readme`, issue #16) merged 2026-09-03; branch deleted,
+  issue #16 auto-closed. PR #14 (`gobai-nodd-script`, issue #13) reviewed by Eli
+  2026-09-03 and merged earlier the same day; branch deleted, issue #13
+  auto-closed. Every earlier task branch (`rfromv-nodd-processing` #4,
+  `rfromv-nodd-batch-script` #6, `local-mac-run` #7, `scratch-dir-error` #9,
+  `fix-h5py-dep` #10, `fix-erddap-download` #12) is also merged and deleted.
 - **The batch script lives at the repo root as `nodd.py`** (PR #14), covering
   RFROM's six streams and GOBAI's two. `RFROMV/rfrom_nodd.py`, the back-compat
   shim from that promotion, is **removed** (PR #18/issue #16) — every VM run
@@ -24,7 +25,6 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   `python nodd.py --setup`; `--help` gained an epilog with examples. The three
   READMEs (root, `RFROMV/`, `GOBAI-O2/`) are now quickstart + tables only,
   pointing at `--help`/`--setup` instead of duplicating them.
-- Untracked: `RFROMV/upload_to_nodd.ipynb` (Eli's sandbox — leave it alone).
 - `RFROMV/setup_bare_VM.txt` is **Eli's own scratch cheat-sheet**, not pipeline
   code and not generated docs — the shell commands he pastes to stand up a bare
   VM (no JupyterHub, nothing preinstalled). It is deliberately informal and
@@ -42,6 +42,18 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 - Unfixed findings → one GitHub issue per probable root cause.
 
 ## In progress / next
+
+- **Clean up RFROMV notebooks** (issue #15, DONE — PR #19 merged 2026-09-03,
+  branch `issue-15-cleanup-rfromv-notebooks` deleted). Folded the useful
+  background from the two RFROMV sandbox notebooks (why ERDDAP's native
+  per-month chunking has to be rewritten — can't append varying time-chunk
+  sizes, wasteful to load all 58 depth levels together) into
+  `prep-one-netcdf-for-NODD.ipynb`'s intro, added a pointer from the notebook to
+  `nodd.py` as the production implementation (one example command +
+  `--help` pointer, no flag-doc duplication), and removed a stray leftover
+  "test read" cell. Deleted `prep-for-NODD-rfromv23.ipynb` and the untracked
+  `upload_to_nodd.ipynb`; `RFROMV/README.md`'s Sandbox section now only lists
+  `setup_bare_VM.txt`.
 
 - **Clean up help and READMEs** (issue #16, DONE — PR #18 merged 2026-09-03,
   branch `issue-16-cleanup-help-readme` deleted). `nodd.py --help` now carries
