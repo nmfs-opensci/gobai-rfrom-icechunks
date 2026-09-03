@@ -3,8 +3,12 @@
 
 Covers two products that share a grid and therefore share this pipeline:
 
-  * **RFROM v2.3** gridded Argo temperature/salinity -- six streams, to
-    ``gs://noaa-oar-rfrom/netcdf/<version>/<stream>/`` (GitHub issues #1, #5).
+  * **RFROM** gridded Argo temperature/salinity -- v2.3 (six streams), v2.2
+    (temp_v22, sal_v22) and v2.1 (temp_v21), to
+    ``gs://noaa-oar-rfrom/netcdf/<version>/<stream>/`` (GitHub issues #1, #5, #20).
+    v2.2/v2.1 are each a single continuous series -- no realtime/error split
+    (that split exists only for a *different* v2.2 product, Ocean Heat Content
+    anomaly, which is out of scope here; see GitHub issue #21).
   * **GOBAI HR** gridded oxygen and nitrate -- two streams, to
     ``gs://noaa-oar-gobai/netcdf/<version>/<stream>/`` (GitHub issue #13).
 
@@ -167,7 +171,7 @@ ERDDAP_FILES = "https://data.pmel.noaa.gov/pmel/erddap/files"
 ERDDAP_GRIDDAP = "https://data.pmel.noaa.gov/pmel/erddap/griddap"
 
 # --------------------------------------------------------------------------- #
-# The eight streams. This dict is the ONE place stream differences live.       #
+# The streams. This dict is the ONE place stream differences live.            #
 #                                                                              #
 # --- RFROM v2.3 (six streams) ------------------------------------------------#
 # All confirmed against ERDDAP 2026-09-02. Grid is (time, mean_pressure,       #
@@ -257,6 +261,68 @@ STREAMS = {
         },
         "monthly_template": "RFROMV23_SAL_ERROR_{year}_{month:02d}.nc",
         "out_template": "RFROMV23_SAL_ERROR_{start}_{end}.nc",
+    },
+
+    # --- RFROM v2.2 / v2.1 (three streams) ------------------------------------ #
+    #
+    # GitHub issue #20. Confirmed against ERDDAP and one downloaded monthly file
+    # of each dataset, 2026-09-03: grid (mean_pressure 58, latitude 720,
+    # longitude 1440) and mean_pressure_bnds are bit-identical to v2.3.
+    #
+    # Gotcha the issue's original URLs got wrong: argo_rfromv22 / _realtime /
+    # _error are NOT temp/sal -- they are a different product, Ocean Heat
+    # Content anomaly, on a different vertical grid (mean_depth, 10 levels).
+    # See issue #21. The real v2.2 temp/sal analogs are argo_rfromv22_temp and
+    # argo_rfromv22_sal, and unlike v2.3 there is no realtime/error sibling for
+    # either -- each is one continuous series (confirmed: no
+    # argo_rfromv22_{temp,sal}_{realtime,error} dataset exists on ERDDAP).
+    # v2.1 has temperature only, no salinity dataset at all.
+    #
+    # Each entry sets "version" to override PRODUCTS["rfrom"]["default_version"]
+    # (v2.3) -- these are older versions, not the current default, and getting
+    # this wrong would upload v2.2/v2.1 files into the v2.3 tree.
+    #
+    # temp_v22 and sal_v22 don't even end on the same date (2024-12 vs
+    # 2025-12) -- real, confirmed on ERDDAP, not a bug in this script.
+    "temp_v22": {
+        "product": "rfrom",
+        "version": "v2.2",
+        "dataset_id": "argo_rfromv22_temp",
+        "data_var": "ocean_temperature",
+        "var_attrs": {
+            "standard_name": "sea_water_conservative_temperature",
+            "units": "degree_Celsius",
+        },
+        "monthly_template": "RFROMV22_TEMP_STABLE_{year}_{month:02d}.nc",
+        "out_template": "RFROMV22_TEMP_STABLE_{start}_{end}.nc",
+    },
+    "sal_v22": {
+        "product": "rfrom",
+        "version": "v2.2",
+        "dataset_id": "argo_rfromv22_sal",
+        "data_var": "ocean_salinity",
+        # Same TEOS-10 mislabel as v2.3's sal streams (Description says
+        # "absolute salinity (TEOS-10)"; ERDDAP's standard_name/units say
+        # sea_water_practical_salinity / PSU) -- same override, values unchanged.
+        "var_attrs": {
+            "standard_name": "sea_water_absolute_salinity",
+            "units": "grams_per_kilogram",
+        },
+        "monthly_template": "RFROMV22_SAL_STABLE_{year}_{month:02d}.nc",
+        "out_template": "RFROMV22_SAL_STABLE_{start}_{end}.nc",
+    },
+    "temp_v21": {
+        "product": "rfrom",
+        "version": "v2.1",
+        "dataset_id": "argo_rfromv21_temp",
+        "data_var": "ocean_temperature",
+        "var_attrs": {
+            "standard_name": "sea_water_conservative_temperature",
+            "units": "degree_Celsius",
+        },
+        # v2.1 filenames have no STABLE infix (unlike v2.3/v2.2).
+        "monthly_template": "RFROMV21_TEMP_{year}_{month:02d}.nc",
+        "out_template": "RFROMV21_TEMP_{start}_{end}.nc",
     },
 
     # --- GOBAI HR (two streams) ---------------------------------------------- #
@@ -673,6 +739,7 @@ Examples
   python nodd.py --stream temp_stable --all            production run, one VM
   python nodd.py --stream sal_stable --blocks 0-8      VM A of a split stream
   python nodd.py --stream sal_stable --blocks 9-16     VM B, disjoint range
+  python nodd.py --stream temp_v22 --all               v2.2, version implied
   python nodd.py --stream o2 --all --no-upload --keep-scratch   local test run
 
 Setup (venv, scratch disk, GCS credentials, tmux for long runs):
@@ -692,9 +759,10 @@ def main(argv=None):
     )
     p.add_argument("--stream", choices=sorted(STREAMS), default=None,
                    help="Product stream to process (one at a time). "
-                        "RFROM: temp_stable, temp_realtime, temp_error, sal_stable, "
-                        "sal_realtime, sal_error. GOBAI: o2, no3. Required unless "
-                        "--setup is given.")
+                        "RFROM v2.3: temp_stable, temp_realtime, temp_error, "
+                        "sal_stable, sal_realtime, sal_error. RFROM v2.2/v2.1: "
+                        "temp_v22, sal_v22, temp_v21. GOBAI: o2, no3. Required "
+                        "unless --setup is given.")
     grp = p.add_mutually_exclusive_group()
     grp.add_argument("--blocks", metavar="RANGE",
                      help="Blocks to process, e.g. '3', '0-4', '0,2,5'. "
@@ -702,8 +770,9 @@ def main(argv=None):
     grp.add_argument("--all", action="store_true",
                      help="Process every block in the stream.")
     p.add_argument("--version", default=None,
-                   help="Product version prefix. Defaults to the stream's product "
-                        "default: "
+                   help="Product version prefix. Defaults to the stream's own "
+                        "version if it sets one (e.g. temp_v22 -> v2.2), else the "
+                        "stream's product default: "
                         + ", ".join(f"{k} {v['default_version']}"
                                     for k, v in PRODUCTS.items()) + ".")
     p.add_argument("--list", action="store_true",
@@ -728,7 +797,7 @@ def main(argv=None):
 
     stream = args.stream
     product = PRODUCTS[STREAMS[stream]["product"]]
-    version = args.version or product["default_version"]
+    version = args.version or STREAMS[stream].get("version") or product["default_version"]
     configure_paths(stream)
     print(f"Stream: {stream}  ({STREAMS[stream]['dataset_id']})")
 
