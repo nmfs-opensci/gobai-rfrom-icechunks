@@ -43,11 +43,14 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   back-compat shim. Two streams `o2`/`no3` → `gs://noaa-oar-gobai/netcdf/v202606/`,
   18 blocks each, ~0.41 TB per stream. Validated end to end on `o2` block 17:
   data bit-identical to source, `cfchecker` 0 errors / 0 warnings.
-  **Two things need Eli or the author:** (a) the new `cf_refinements` flag is on
-  for GOBAI and off for RFROM so the published RFROM tree stays self-consistent —
-  confirm that is what he wants; (b) ERDDAP's `gobai_no3_hr_v10` config advertises
-  a per-*volume* standard_name against per-*mass* units (RFROM-salinity redux) —
-  worth reporting to Sharp. Env vars are now `NODD_SCRATCH_DIR`/`NODD_GCS_TOKEN`
+  **Both open questions resolved/in flight:** (a) **decided 2026-09-03** — keep
+  `cf_refinements` on for GOBAI, off for RFROM; both fixes are metadata-only and
+  RFROM's published blocks already pass `cfchecker` without them, so a full
+  reprocess isn't worth it now — revisit at RFROM's next real version bump.
+  (b) Eli emailed Sharp 2026-09-03 about the `gobai_no3_hr_v10` per-volume
+  standard_name vs. per-mass units mismatch (RFROM-salinity redux); **awaiting
+  Sharp's reply** on the correct units/standard_name — do not change the `no3`
+  CF mapping in `nodd.py` until that lands. Env vars are now `NODD_SCRATCH_DIR`/`NODD_GCS_TOKEN`
   (old `RFROM_` names still honoured), scratch defaults per-product.
   Next concrete step after merge: build one `no3` block, then run `o2 --all` and
   `no3 --all` on separate VMs.
