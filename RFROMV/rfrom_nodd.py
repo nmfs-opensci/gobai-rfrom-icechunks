@@ -510,9 +510,18 @@ def main(argv=None):
     selected = list(range(len(blocks))) if args.all else parse_blocks(args.blocks, len(blocks))
     print(f"Selected blocks: {selected}\n")
 
-    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    # Report the resolved scratch dir BEFORE creating it: if RFROM_SCRATCH_DIR is
+    # unset off-hub this falls back to the hub path, and the failure should name it.
     print(f"Scratch: {SCRATCH_DIR}")
+    try:
+        os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+    except OSError as exc:
+        p.error(
+            f"cannot create scratch directory {SCRATCH_DIR}: {exc}\n"
+            "Set RFROM_SCRATCH_DIR to a writable path with ~35 GB free "
+            "(the default is the JupyterHub location)."
+        )
 
     do_upload = not args.no_upload
     nodd_dest = f"gs://{NODD_BUCKET}/{NODD_NETCDF_DIR}/{args.version}/{stream}"
