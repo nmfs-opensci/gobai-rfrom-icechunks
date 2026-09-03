@@ -1,10 +1,10 @@
-# RFROMV — RFROM v2.3 → NODD pipeline
+# RFROMV — RFROM → NODD pipeline
 
-Prepares RFROM v2.3 gridded Argo temperature/salinity fields for the NOAA Open
-Data Dissemination (NODD) GCP bucket `gs://noaa-oar-rfrom`. Source files come
-from PMEL ERDDAP; outputs are CF-compliant, rechunked, compressed netCDFs laid
-out per stream under `netcdf/<version>/<stream>/`, ready to be virtualized into a
-downstream Icechunk / VirtualiZarr store.
+Prepares RFROM gridded Argo temperature/salinity fields (v2.3, v2.2, v2.1) for
+the NOAA Open Data Dissemination (NODD) GCP bucket `gs://noaa-oar-rfrom`.
+Source files come from PMEL ERDDAP; outputs are CF-compliant, rechunked,
+compressed netCDFs laid out per stream under `netcdf/<version>/<stream>/`,
+ready to be virtualized into a downstream Icechunk / VirtualiZarr store.
 
 Per output file the pipeline is:
 
@@ -44,6 +44,28 @@ data author. ERDDAP labels the variable `sea_water_practical_salinity` / `PSU`,
 but that is a known upstream mistake the author cannot fix, so the pipeline
 overrides `sal_stable` / `sal_realtime` to `sea_water_absolute_salinity` /
 `grams_per_kilogram` — **metadata only, values unchanged**.
+
+## v2.2 and v2.1 (GitHub issue #20)
+
+Older RFROM versions, published under `netcdf/v2.2/` and `netcdf/v2.1/`. Each
+is a **single continuous series per variable** — unlike v2.3, there is no
+realtime/error split, and the script's per-stream `version` overrides the
+`--version` default so you don't have to pass `--version` yourself:
+
+| stream | version | ERDDAP dataset | data variable | ends |
+|---|---|---|---|---|
+| `temp_v22` | v2.2 | [`argo_rfromv22_temp`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv22_temp.html) | `ocean_temperature` | 2024-12 |
+| `sal_v22`  | v2.2 | [`argo_rfromv22_sal`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv22_sal.html)   | `ocean_salinity` (same TEOS-10 fix as v2.3 †) | 2025-12 |
+| `temp_v21` | v2.1 | [`argo_rfromv21_temp`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv21_temp.html) | `ocean_temperature` | 2023-12 |
+
+v2.1 has no salinity dataset at all. `temp_v22` and `sal_v22` don't end on the
+same date — confirmed on ERDDAP, not a bug.
+
+**Not included**: `argo_rfromv22` / `argo_rfromv22_realtime` / `argo_rfromv22_error`.
+Despite the naming, these are a *different* product — Ocean Heat Content
+anomaly, on a different, coarser vertical grid (`mean_depth`, 10 levels, vs.
+temp/sal's `mean_pressure`, 58 levels) — not variants of temperature/salinity.
+Tracked separately as [issue #21](https://github.com/nmfs-opensci/gobai-rfrom-icechunks/issues/21).
 
 ## Files in this directory
 
