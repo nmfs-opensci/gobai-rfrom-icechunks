@@ -6,11 +6,11 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 ## Repo state
 
 - Repo: `nmfs-opensci/gobai-rfrom-icechunks`, working on `/home/jovyan/gobai-rfrom-icechunks`.
-- Branch: `main`. **One open PR: #14 (`gobai-nodd-script`), issue #13** — awaiting
-  Eli's review; do not delete that branch. Every earlier task branch
-  (`rfromv-nodd-processing` #4, `rfromv-nodd-batch-script` #6, `local-mac-run` #7,
-  `scratch-dir-error` #9, `fix-h5py-dep` #10, `fix-erddap-download` #12) is merged
-  and deleted.
+- Branch: `main`. **No open PRs.** PR #14 (`gobai-nodd-script`, issue #13)
+  reviewed by Eli 2026-09-03 and merged; branch deleted, issue #13 auto-closed.
+  Every earlier task branch (`rfromv-nodd-processing` #4, `rfromv-nodd-batch-script`
+  #6, `local-mac-run` #7, `scratch-dir-error` #9, `fix-h5py-dep` #10,
+  `fix-erddap-download` #12) is also merged and deleted.
 - **The batch script now lives at the repo root as `nodd.py`** (PR #14), covering
   RFROM's six streams and GOBAI's two. `RFROMV/rfrom_nodd.py` is a back-compat
   shim, so older commands and `pixi run` tasks still work.
@@ -31,33 +31,29 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 ## In progress / next
 
-- **GOBAI HR → NODD** (issue #13, code done — **PR #14 open, awaiting Eli's
-  review**, branch `gobai-nodd-script`). Nothing uploaded yet:
-  `gs://noaa-oar-gobai` still holds only its `index.html`, and no `no3` block has
-  been built. Full recon, resolved decisions and the validation log are in
-  **`claude/notes/gobai-nodd.md`** — read that first.
+- **GOBAI HR → NODD** (issue #13, DONE — PR #14 reviewed and merged 2026-09-03,
+  branch `gobai-nodd-script` deleted). Full recon, resolved decisions and the
+  validation log are in **`claude/notes/gobai-nodd.md`** — read that first.
   Headlines: GOBAI HR's grid is *identical* to RFROM v2.3 (coords and
   `mean_pressure_bnds` match value-for-value; RFROM's 1670-step axis is an exact
   prefix of GOBAI's 1719), so `rfrom_nodd.py` was promoted to **`nodd.py` at the
   repo root** covering all eight streams, with `RFROMV/rfrom_nodd.py` left as a
   back-compat shim. Two streams `o2`/`no3` → `gs://noaa-oar-gobai/netcdf/v202606/`,
-  18 blocks each, ~0.41 TB per stream. Validated end to end on `o2` block 17:
-  data bit-identical to source, `cfchecker` 0 errors / 0 warnings.
-  **Both open questions resolved/in flight:** (a) **decided 2026-09-03** — keep
-  `cf_refinements` on for GOBAI, off for RFROM; both fixes are metadata-only and
-  RFROM's published blocks already pass `cfchecker` without them, so a full
-  reprocess isn't worth it now — revisit at RFROM's next real version bump.
-  (b) Eli emailed Sharp 2026-09-03 about the `gobai_no3_hr_v10` per-volume
-  standard_name vs. per-mass units mismatch (RFROM-salinity redux); **awaiting
-  Sharp's reply** on the correct units/standard_name — do not change the `no3`
-  CF mapping in `nodd.py` until that lands. Env vars are now `NODD_SCRATCH_DIR`/`NODD_GCS_TOKEN`
-  (old `RFROM_` names still honoured), scratch defaults per-product.
-  **`no3` block 17 also validated 2026-09-03** (bit-identical to source,
-  `cfchecker` clean) — same pipeline-mechanics result as `o2` block 17; the CF
-  name itself is still provisional pending Sharp. Detail in
-  `claude/notes/gobai-nodd.md`. PR #14 still has **zero reviews** — hold off on
-  `o2 --all` / `no3 --all` (first real writes to the public
-  `gs://noaa-oar-gobai` bucket, ~0.41 TB/hours each) until Eli reviews/merges.
+  18 blocks each, ~0.41 TB per stream. Validated end to end on both `o2` and `no3`
+  block 17: data bit-identical to source, `cfchecker` 0 errors / 0 warnings.
+  `cf_refinements` decided: on for GOBAI, off for RFROM (metadata-only, not worth
+  reprocessing RFROM's published blocks for — revisit at RFROM's next version
+  bump). Env vars are `NODD_SCRATCH_DIR`/`NODD_GCS_TOKEN` (old `RFROM_` names
+  still honoured), scratch defaults per-product.
+  **Still open:** Eli emailed Sharp 2026-09-03 about the `gobai_no3_hr_v10`
+  per-volume standard_name vs. per-mass units mismatch (RFROM-salinity redux) —
+  **awaiting Sharp's reply**; do not change the `no3` CF mapping in `nodd.py`
+  until that lands.
+  **Next: production runs, one VM per stream** —
+  `python nodd.py --stream o2 --all` and `python nodd.py --stream no3 --all`.
+  `git pull` first on each VM to pick up `nodd.py` from `main`. Idempotent
+  (safe to interrupt/re-run, uploaded blocks are skipped). Nothing uploaded to
+  `gs://noaa-oar-gobai` yet as of this handoff — still only its `index.html`.
 
 - **ERDDAP download timeout + re-download** (issue #11, DONE — PR #12 merged,
   `main` @ `a28b921`, branch deleted). Both symptoms had one cause: the `requests.head()`
