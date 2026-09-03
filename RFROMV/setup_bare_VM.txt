@@ -1,0 +1,38 @@
+# Setup for a bare VM
+
+sudo apt-get update && sudo apt-get install -y git curl tmux
+git clone https://github.com/nmfs-opensci/gobai-rfrom-icechunks.git
+cd gobai-rfrom-icechunks/RFROMV
+sudo apt-get update
+sudo apt-get install -y python3-venv python3-pip
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -r requirements.txt
+
+curl -fsSL https://sdk.cloud.google.com | bash     # then restart the shell:
+exec -l $SHELL
+
+gcloud auth application-default login          # opens a browser
+export RFROM_GCS_TOKEN="$HOME/.config/gcloud/application_default_credentials.json"
+
+python -c "
+import gcsfs, os
+fs = gcsfs.GCSFileSystem(token=os.environ['RFROM_GCS_TOKEN'])
+print(fs.ls('noaa-oar-rfrom/netcdf/v2.3/temp_stable')[:3])   # read
+fs.pipe('noaa-oar-rfrom/netcdf/v2.3/_write_check.txt', b'ok'); print('write OK')
+fs.rm('noaa-oar-rfrom/netcdf/v2.3/_write_check.txt')
+"
+
+source .venv/bin/activate                             # or: conda activate rfromv-nodd
+export RFROM_SCRATCH_DIR="$HOME/rfromv-scratch"
+export RFROM_GCS_TOKEN="$HOME/.config/gcloud/application_default_credentials.json"
+
+# now run one of these
+#python rfrom_nodd.py --stream temp_stable --all
+#python rfrom_nodd.py --stream temp_realtime  --all
+#python rfrom_nodd.py --stream temp_error  --all
+#python rfrom_nodd.py --stream sal_stable --all
+#python rfrom_nodd.py --stream sal_realtime  --all
+#python rfrom_nodd.py --stream sal_error  --all
