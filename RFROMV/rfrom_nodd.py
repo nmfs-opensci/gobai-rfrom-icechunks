@@ -53,6 +53,7 @@ I/O-bound on the unchunked source files.
 import argparse
 import os
 import sys
+import time
 
 import numpy as np
 import pandas as pd
@@ -94,6 +95,13 @@ if os.sep in GCS_TOKEN or GCS_TOKEN.startswith("~"):
 NODD_BUCKET = "noaa-oar-rfrom"
 NODD_NETCDF_DIR = "netcdf"
 DEFAULT_VERSION = "v2.3"
+
+# Download resilience. ERDDAP reads go flaky on long runs (GitHub issue #11), and a
+# single failed read used to kill the whole run. DOWNLOAD_TIMEOUT is a per-read
+# socket timeout, not a whole-file deadline; the files stream in a few minutes each.
+DOWNLOAD_ATTEMPTS = 4          # 1 initial try + 3 retries
+DOWNLOAD_TIMEOUT = 120         # seconds, per socket read
+RETRY_BACKOFF = 15             # seconds; doubles each retry (15, 30, 60)
 
 ERDDAP_FILES = "https://data.pmel.noaa.gov/pmel/erddap/files"
 ERDDAP_GRIDDAP = "https://data.pmel.noaa.gov/pmel/erddap/griddap"
@@ -260,23 +268,74 @@ def make_file_blocks(stream, times, block_size=BLOCK_SIZE):
     return blocks
 
 
-def download(url, dest, chunk=16 * 1024 * 1024):
-    """Download url -> dest, skipping if a complete copy already exists."""
-    head = requests.head(url, timeout=60)
-    head.raise_for_status()
-    remote_size = int(head.headers.get("Content-Length", 0))
-    if os.path.exists(dest) and remote_size and os.path.getsize(dest) == remote_size:
-        print(f"    skip (have) {os.path.basename(dest)}")
+def _remove_quietly(path):
+    """Delete path if it exists, ignoring errors."""
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
+def is_readable_netcdf(path):
+    """True if path opens as HDF5/netCDF-4 -- used to tell a complete file from a stub.
+
+    ERDDAP's /files/ endpoint sends these gzip-encoded with chunked transfer, so a
+    response carries no Content-Length and supports no Range requests (GitHub issue
+    #11): there is no byte count to compare a local file against. Opening the file
+    is the available completeness test -- a truncated download has no valid HDF5
+    superblock/root group and fails here.
+    """
+    try:
+        import h5py
+        with h5py.File(path, "r"):
+            return True
+    except Exception:
+        return False
+
+
+def download(url, dest, chunk=16 * 1024 * 1024, attempts=DOWNLOAD_ATTEMPTS):
+    """Download url -> dest, skipping if a complete copy already exists.
+
+    Downloads land in a ".part" file that is validated and then atomically renamed,
+    so the presence of ``dest`` means a verified-complete file: re-running the script
+    re-uses what is already in scratch instead of re-fetching ~12 GB per block.
+
+    Transient network failures are retried with exponential backoff. ERDDAP does not
+    honour Range requests (it answers 416), so a retry restarts the file rather than
+    resuming it.
+    """
+    name = os.path.basename(dest)
+    if os.path.exists(dest) and is_readable_netcdf(dest):
+        print(f"    skip (have) {name}")
         return dest
+
     tmp = dest + ".part"
-    with requests.get(url, stream=True, timeout=120) as r:
-        r.raise_for_status()
-        with open(tmp, "wb") as f:
-            for block_bytes in r.iter_content(chunk_size=chunk):
-                f.write(block_bytes)
-    os.replace(tmp, dest)
-    print(f"    got  {os.path.basename(dest)}  ({os.path.getsize(dest) / 1e9:.2f} GB)")
-    return dest
+    for attempt in range(1, attempts + 1):
+        try:
+            # No HEAD first: ERDDAP's HEAD on these files takes ~45 s (it appears to
+            # build the response body to answer), routinely blowing past a read
+            # timeout and killing the run, and it returns no Content-Length anyway.
+            with requests.get(url, stream=True, timeout=DOWNLOAD_TIMEOUT) as r:
+                r.raise_for_status()
+                with open(tmp, "wb") as f:
+                    for block_bytes in r.iter_content(chunk_size=chunk):
+                        f.write(block_bytes)
+            if not is_readable_netcdf(tmp):
+                raise OSError(f"downloaded file is not readable netCDF: {name}")
+        except (requests.RequestException, OSError) as exc:
+            _remove_quietly(tmp)
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            fatal = status is not None and 400 <= status < 500
+            if fatal or attempt == attempts:
+                raise
+            wait = RETRY_BACKOFF * 2 ** (attempt - 1)
+            print(f"    retry {attempt}/{attempts - 1} for {name} in {wait}s "
+                  f"({type(exc).__name__}: {exc})")
+            time.sleep(wait)
+            continue
+        os.replace(tmp, dest)
+        print(f"    got  {name}  ({os.path.getsize(dest) / 1e9:.2f} GB)")
+        return dest
 
 
 def download_block(block):
@@ -425,15 +484,9 @@ def process_block(stream, block, version, fs, nodd_dest, do_upload, force, keep_
         # shared with the next block are re-downloaded (download() is idempotent); this
         # keeps scratch bounded when processing many blocks.
         for f in local_files:
-            try:
-                os.remove(f)
-            except OSError:
-                pass
+            _remove_quietly(f)
         if do_upload:
-            try:
-                os.remove(out_path)
-            except OSError:
-                pass
+            _remove_quietly(out_path)
         print("    cleaned scratch for this block")
 
     return result
