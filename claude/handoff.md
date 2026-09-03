@@ -6,20 +6,32 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 ## Repo state
 
 - Repo: `nmfs-opensci/gobai-rfrom-icechunks`, working on `/home/jovyan/gobai-rfrom-icechunks`.
-- Branch: `main`. **No open PRs.** PR #14 (`gobai-nodd-script`, issue #13)
-  reviewed by Eli 2026-09-03 and merged; branch deleted, issue #13 auto-closed.
-  Every earlier task branch (`rfromv-nodd-processing` #4, `rfromv-nodd-batch-script`
-  #6, `local-mac-run` #7, `scratch-dir-error` #9, `fix-h5py-dep` #10,
-  `fix-erddap-download` #12) is also merged and deleted.
-- **The batch script now lives at the repo root as `nodd.py`** (PR #14), covering
-  RFROM's six streams and GOBAI's two. `RFROMV/rfrom_nodd.py` is a back-compat
-  shim, so older commands and `pixi run` tasks still work.
+- Branch: `main`. **No open PRs.** PR #18 (`issue-16-cleanup-help-readme`, issue
+  #16) merged 2026-09-03; branch deleted, issue #16 auto-closed. PR #14
+  (`gobai-nodd-script`, issue #13) reviewed by Eli 2026-09-03 and merged earlier
+  the same day; branch deleted, issue #13 auto-closed. Every earlier task branch
+  (`rfromv-nodd-processing` #4, `rfromv-nodd-batch-script` #6, `local-mac-run`
+  #7, `scratch-dir-error` #9, `fix-h5py-dep` #10, `fix-erddap-download` #12) is
+  also merged and deleted.
+- **The batch script lives at the repo root as `nodd.py`** (PR #14), covering
+  RFROM's six streams and GOBAI's two. `RFROMV/rfrom_nodd.py`, the back-compat
+  shim from that promotion, is **removed** (PR #18/issue #16) — every VM run
+  still using it had finished.
+- **Off-hub setup is now venv+pip only** (PR #18/issue #16): the single
+  `requirements.txt` moved from `RFROMV/` to the repo root next to `nodd.py`;
+  `pixi.toml`/`environment.yml` are deleted. The full walkthrough moved out of
+  `RFROMV/README.md` into a new root-level **`setup.md`**, also printed by
+  `python nodd.py --setup`; `--help` gained an epilog with examples. The three
+  READMEs (root, `RFROMV/`, `GOBAI-O2/`) are now quickstart + tables only,
+  pointing at `--help`/`--setup` instead of duplicating them.
 - Untracked: `RFROMV/upload_to_nodd.ipynb` (Eli's sandbox — leave it alone).
 - `RFROMV/setup_bare_VM.txt` is **Eli's own scratch cheat-sheet**, not pipeline
   code and not generated docs — the shell commands he pastes to stand up a bare
   VM (no JupyterHub, nothing preinstalled). It is deliberately informal and
-  overlaps `RFROMV/README.md` "Running off-hub"; do not tidy it, restructure it,
-  or treat a divergence from the README as a bug. Leave it to Eli unless he asks.
+  overlaps `setup.md`; do not tidy it, restructure it, or treat a divergence
+  from `setup.md` as a bug. Leave it to Eli unless he asks — it still has
+  commented-out `rfrom_nodd.py` example lines, now stale, left for him to
+  update himself.
 
 ## Working principles
 
@@ -31,6 +43,20 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 ## In progress / next
 
+- **Clean up help and READMEs** (issue #16, DONE — PR #18 merged 2026-09-03,
+  branch `issue-16-cleanup-help-readme` deleted). `nodd.py --help` now carries
+  an epilog with usage examples; new `python nodd.py --setup` prints a
+  root-level `setup.md` extracted from `RFROMV/README.md`'s old "Running
+  off-hub" section (Python env, scratch disk, GCS credentials, tmux, resource
+  expectations) so there's one copy of it, shared by both products. Follow-up
+  from Eli's issue comment, same PR: `RFROMV/rfrom_nodd.py` back-compat shim
+  deleted (no VM runs still used it), `requirements.txt` moved from `RFROMV/`
+  to the repo root, `pixi.toml`/`environment.yml` removed (venv+pip only). A
+  reproducibility pass (imports vs. `requirements.txt`, stale references,
+  fresh-clone path correctness, hardcoded paths, committed lockfiles/version
+  pins) found no gaps. `RFROMV/setup_bare_VM.txt` untouched, per standing
+  guidance below.
+
 - **GOBAI HR → NODD** (issue #13, DONE — PR #14 reviewed and merged 2026-09-03,
   branch `gobai-nodd-script` deleted). Full recon, resolved decisions and the
   validation log are in **`claude/notes/gobai-nodd.md`** — read that first.
@@ -38,7 +64,8 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   `mean_pressure_bnds` match value-for-value; RFROM's 1670-step axis is an exact
   prefix of GOBAI's 1719), so `rfrom_nodd.py` was promoted to **`nodd.py` at the
   repo root** covering all eight streams, with `RFROMV/rfrom_nodd.py` left as a
-  back-compat shim. Two streams `o2`/`no3` → `gs://noaa-oar-gobai/netcdf/v202606/`,
+  back-compat shim (later removed in issue #16, once VM runs no longer needed
+  it). Two streams `o2`/`no3` → `gs://noaa-oar-gobai/netcdf/v202606/`,
   18 blocks each, ~0.41 TB per stream. Validated end to end on both `o2` and `no3`
   block 17: data bit-identical to source, `cfchecker` 0 errors / 0 warnings.
   `cf_refinements` decided: on for GOBAI, off for RFROM (metadata-only, not worth
@@ -120,19 +147,17 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 ## Follow-ups (not blocking)
 
-- The dependency manifests still live in `RFROMV/` though `nodd.py` is now at the
-  repo root. They cover both products; moving them would break Eli's VM setup
-  notes mid-flight.
 - A bad `--blocks` value raises a raw `ValueError` traceback rather than a clean
   argparse error. Pre-existing, untouched by #13.
 - `~7.5 GB` of GOBAI scratch is on the hub at
   `/home/jovyan/shared-public/gobai-scratch/` (two sample monthly files, block
   17's five sources, and its output). Delete when prototyping is done.
 
-- The off-hub manifests are unverified by installation — nothing in this repo
-  installs `requirements.txt`/`pixi.toml`/`environment.yml` from scratch, which is
-  exactly how issue #8 got through. A clean-venv smoke install would catch the next
-  one.
+- `requirements.txt` (root) is unverified by installation — nothing in this repo
+  installs it into a clean venv from scratch, which is exactly how issue #8 got
+  through. A clean-venv smoke install would catch the next one. (Narrower than
+  before #16: it's now the only manifest, no more pixi/conda copies to keep in
+  sync.)
 - Nothing in the off-hub path has been run end to end from a bare VM by an agent;
   Eli has done it by hand. If it is ever automated, that is the gap to close.
 - `update_nodd.py` — weekly realtime reconcile (re-download the moving realtime
