@@ -67,6 +67,9 @@ overrides `sal_stable` / `sal_realtime` to `sea_water_absolute_salinity` /
 
 - **`prep-for-NODD-rfromv23.ipynb`** — earlier exploratory notebook.
 - **`upload_to_nodd.ipynb`** — a short scratch uploader.
+- **`setup_bare_VM.txt`** — Eli's personal cheat-sheet of shell commands for
+  standing up a bare VM. Informal by design and overlapping "Running off-hub"
+  below, which is the maintained version.
 
 Both are kept for reference only; don't treat them as the source of truth.
 

@@ -86,6 +86,19 @@ already in the bucket unless `--force`). `--list` prints the block→monthly-fil
 plan without downloading. See `claude/notes/nodd-batch-script.md` for the resolved
 design decisions.
 
+The script also runs off-hub (bare VM, laptop): `RFROM_SCRATCH_DIR` and
+`RFROM_GCS_TOKEN` override the two hardcoded hub paths, with the hub values as
+defaults. `RFROMV/{requirements.txt,pixi.toml,environment.yml}` carry the same
+dependency set for venv+pip / pixi / conda, and `RFROMV/README.md` has the full
+"Running off-hub" setup.
+
+**`RFROMV/setup_bare_VM.txt` is Eli's personal cheat-sheet**, not pipeline code
+and not generated docs — the raw shell commands he pastes to stand up a bare VM,
+since he does not always work on a JupyterHub where everything is preinstalled.
+It is deliberately informal and overlaps the README on purpose. Do not tidy,
+restructure, or "sync" it, and do not treat a difference from the README as a bug
+to fix; leave it alone unless Eli asks.
+
 ### Two constraints that are easy to break
 
 - **Do not alter the original data.** Open with
