@@ -399,12 +399,26 @@ def write_store(repo, ds, message):
 # Validation                                                                   #
 # --------------------------------------------------------------------------- #
 
+def _sample(urls, n):
+    """Pick n files to check: always the first and the last, then evenly spaced.
+
+    The last file matters most -- it owns the padded edge chunk, the part stock
+    tooling refuses to build and therefore the part most likely to be wrong.
+    """
+    if n >= len(urls):
+        return list(urls)
+    if n <= 1:
+        return [urls[-1]]
+    middle = [urls[round(i * (len(urls) - 1) / (n - 1))] for i in range(1, n - 1)]
+    return [urls[0]] + middle + [urls[-1]]
+
+
 def validate(repo, cfg, sample_files=2, verbose=True):
     """Read the store back the way a consumer will, and check it against the source.
 
-    Structure and coverage on the whole store; values on a sample of source files,
-    always including the last one (the padded edge chunk is what is most likely to
-    be wrong, and it is the part stock tooling refuses to build).
+    Three checks, in increasing cost: the time axis is evenly spaced; the store
+    spans exactly the published files (endpoints, not just length); and the values
+    at both ends of a sample of files match the netCDFs they came from.
     """
     import gcsfs
 
@@ -412,36 +426,45 @@ def validate(repo, cfg, sample_files=2, verbose=True):
     if verbose:
         print(f"  store: {dict(ds.sizes)}")
         print(f"  variables: {', '.join(ds.data_vars)}")
-        print(f"  time: {ds.time.values[0]} -> {ds.time.values[-1]}")
+        print(f"  time: {str(ds.time.values[0])[:10]} -> {str(ds.time.values[-1])[:10]}")
 
     problems = []
+    store_times = pd.DatetimeIndex(ds.time.values)
+    step = np.unique(np.diff(store_times))
+    if len(step) != 1:
+        problems.append(f"time axis is not evenly spaced: {len(step)} distinct steps")
+
     fs = gcsfs.GCSFileSystem(token=GCS_TOKEN)
     for stream, var in cfg["variables"].items():
         urls = list_stream_files(cfg, stream, fs)
-        expected = sum(1 for _ in urls)
+        chosen = _sample(urls, sample_files)
         if verbose:
-            print(f"  {var}: {expected} source files, checking {sample_files}")
-        chosen = ([urls[0]] + urls[1:-1][: max(0, sample_files - 2)] + [urls[-1]])[-sample_files:]
+            print(f"  {var}: {len(urls)} source files, checking {len(chosen)}")
         for url in chosen:
             with fs.open(url.replace("gs://", ""), "rb", block_size=8 * 1024 * 1024) as fh:
                 src = xr.open_dataset(fh, engine="h5netcdf")
-                t0, t1 = src.time.values[0], src.time.values[-1]
-                # one pressure level, whole horizontal field, first and last step
-                for t in (t0, t1):
+                name = url.split("/")[-1]
+                for t in (src.time.values[0], src.time.values[-1]):
+                    when = np.datetime_as_string(t, "D")
+                    # Coverage first: a store that simply stops early would other-
+                    # wise fail as an unreadable KeyError from .sel().
+                    if t not in store_times:
+                        problems.append(f"{var}: the store does not cover {when} "
+                                        f"(published in {name})")
+                        continue
                     a = src[var].sel(time=t).isel(mean_pressure=0).values
                     b = ds[var].sel(time=t).isel(mean_pressure=0).values
                     if not np.array_equal(a, b, equal_nan=True):
-                        problems.append(f"{var} at {np.datetime_as_string(t, 'D')} "
-                                        f"differs from {url.split('/')[-1]}")
+                        problems.append(f"{var}: values at {when} differ from {name}")
                     elif verbose:
-                        print(f"    {np.datetime_as_string(t, 'D')} matches "
-                              f"({url.split('/')[-1]})")
+                        print(f"    {when} matches ({name})")
+
     if problems:
-        for p in problems:
-            print(f"  MISMATCH: {p}")
+        for problem in problems:
+            print(f"  FAIL: {problem}")
         return False
     if verbose:
-        print("  all sampled values match the source netCDFs")
+        print("  time axis regular, endpoints covered, sampled values match the source")
     return True
 
 
