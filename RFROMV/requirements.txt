@@ -1,4 +1,4 @@
-# Dependencies for RFROMV/rfrom_nodd.py (see README.md, "Running off-hub").
+# Dependencies for the NODD batch script ../nodd.py (see README.md, "Running off-hub").
 # Lower bounds only -- these are the versions the pipeline was validated on
 # (JupyterHub, Python 3.12); newer is expected to be fine.
 xarray>=2025.12.0

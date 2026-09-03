@@ -6,11 +6,14 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 ## Repo state
 
 - Repo: `nmfs-opensci/gobai-rfrom-icechunks`, working on `/home/jovyan/gobai-rfrom-icechunks`.
-- Branch: `main`, clean. `CLAUDE.md` + `claude/` are committed. **No open PRs and
-  no branches other than `main`, local or remote** — every task branch
+- Branch: `main`. **One open PR: #14 (`gobai-nodd-script`), issue #13** — awaiting
+  Eli's review; do not delete that branch. Every earlier task branch
   (`rfromv-nodd-processing` #4, `rfromv-nodd-batch-script` #6, `local-mac-run` #7,
   `scratch-dir-error` #9, `fix-h5py-dep` #10, `fix-erddap-download` #12) is merged
   and deleted.
+- **The batch script now lives at the repo root as `nodd.py`** (PR #14), covering
+  RFROM's six streams and GOBAI's two. `RFROMV/rfrom_nodd.py` is a back-compat
+  shim, so older commands and `pixi run` tasks still work.
 - Untracked: `RFROMV/upload_to_nodd.ipynb` (Eli's sandbox — leave it alone).
 - `RFROMV/setup_bare_VM.txt` is **Eli's own scratch cheat-sheet**, not pipeline
   code and not generated docs — the shell commands he pastes to stand up a bare
@@ -28,21 +31,33 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 ## In progress / next
 
-- **IMMEDIATE NEXT TASK — GOBAI-O2 → NODD, analysis + plan.** Same goal as the
-  RFROM work but a different product and a different author: analyze the GOBAI
-  files on PMEL ERDDAP, then propose a processing plan for NODD. Reconnaissance is
-  already done and written up in **`claude/notes/gobai-nodd.md`** — read that
-  first. Headlines: ERDDAP has two datasets, `gobai_o2_hr_v10` and
-  `gobai_no3_hr_v10` (**HR-v1.0, weekly** — NOT the v2.3-monthly-from-NCEI product
-  in `GOBAI-O2/gobai-o2-monthly-icechunk-sc.ipynb`; do not conflate them); the grid
-  is *identical* to RFROM v2.3 `(1719, 58, 720, 1440)` so `rfrom_nodd.py` should
-  transfer nearly as-is at 18 blocks of 100; 396 monthly files and ~0.41 TB per
-  dataset; and `o2`/`mean_pressure` carry **no `standard_name`** with units as the
-  non-CF string `"micromole per kilogram"`, so a CF pass is needed. Six open
-  questions for Eli/the author are listed at the end of that note (NO3 in scope?
-  target bucket? `v1.0` vs the `v202606` in the filenames? realtime sibling? CF
-  names? `mean_pressure_bnds`?). Next concrete step: download **one** monthly file
-  and inspect it before designing anything. No GitHub issue is open for this yet.
+- **GOBAI HR → NODD** (issue #13, code done — **PR #14 open, awaiting Eli's
+  review**, branch `gobai-nodd-script`). Nothing uploaded yet:
+  `gs://noaa-oar-gobai` still holds only its `index.html`, and no `no3` block has
+  been built. Full recon, resolved decisions and the validation log are in
+  **`claude/notes/gobai-nodd.md`** — read that first.
+  Headlines: GOBAI HR's grid is *identical* to RFROM v2.3 (coords and
+  `mean_pressure_bnds` match value-for-value; RFROM's 1670-step axis is an exact
+  prefix of GOBAI's 1719), so `rfrom_nodd.py` was promoted to **`nodd.py` at the
+  repo root** covering all eight streams, with `RFROMV/rfrom_nodd.py` left as a
+  back-compat shim. Two streams `o2`/`no3` → `gs://noaa-oar-gobai/netcdf/v202606/`,
+  18 blocks each, ~0.41 TB per stream. Validated end to end on `o2` block 17:
+  data bit-identical to source, `cfchecker` 0 errors / 0 warnings.
+  **Both open questions resolved/in flight:** (a) **decided 2026-09-03** — keep
+  `cf_refinements` on for GOBAI, off for RFROM; both fixes are metadata-only and
+  RFROM's published blocks already pass `cfchecker` without them, so a full
+  reprocess isn't worth it now — revisit at RFROM's next real version bump.
+  (b) Eli emailed Sharp 2026-09-03 about the `gobai_no3_hr_v10` per-volume
+  standard_name vs. per-mass units mismatch (RFROM-salinity redux); **awaiting
+  Sharp's reply** on the correct units/standard_name — do not change the `no3`
+  CF mapping in `nodd.py` until that lands. Env vars are now `NODD_SCRATCH_DIR`/`NODD_GCS_TOKEN`
+  (old `RFROM_` names still honoured), scratch defaults per-product.
+  **`no3` block 17 also validated 2026-09-03** (bit-identical to source,
+  `cfchecker` clean) — same pipeline-mechanics result as `o2` block 17; the CF
+  name itself is still provisional pending Sharp. Detail in
+  `claude/notes/gobai-nodd.md`. PR #14 still has **zero reviews** — hold off on
+  `o2 --all` / `no3 --all` (first real writes to the public
+  `gs://noaa-oar-gobai` bucket, ~0.41 TB/hours each) until Eli reviews/merges.
 
 - **ERDDAP download timeout + re-download** (issue #11, DONE — PR #12 merged,
   `main` @ `a28b921`, branch deleted). Both symptoms had one cause: the `requests.head()`
@@ -108,6 +123,15 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   (TEOS-10) g/kg (ERDDAP mislabels it PSU — corrected, see the note).
 
 ## Follow-ups (not blocking)
+
+- The dependency manifests still live in `RFROMV/` though `nodd.py` is now at the
+  repo root. They cover both products; moving them would break Eli's VM setup
+  notes mid-flight.
+- A bad `--blocks` value raises a raw `ValueError` traceback rather than a clean
+  argparse error. Pre-existing, untouched by #13.
+- `~7.5 GB` of GOBAI scratch is on the hub at
+  `/home/jovyan/shared-public/gobai-scratch/` (two sample monthly files, block
+  17's five sources, and its output). Delete when prototyping is done.
 
 - The off-hub manifests are unverified by installation — nothing in this repo
   installs `requirements.txt`/`pixi.toml`/`environment.yml` from scratch, which is
