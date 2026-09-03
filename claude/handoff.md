@@ -64,7 +64,7 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   attempt 3. Diagnostic for Eli at `/home/jovyan/erddap-head-check.sh` (curl-only,
   run on a VM to compare HEAD latency with the hub) — optional, since the fix
   deletes the cliff rather than moving it.
-- **`settings.json` work (deferred behind #11).** This is Claude Code config,
+- **`settings.json` work (still deferred; #11 is now closed).** This is Claude Code config,
   not RFROM data work. The portable config lives in the **`~/claude-config`** repo
   (symlinked into `~/.claude` by `bootstrap.sh`); auth/account toggling (personal
   vs Bedrock) is machine-local in `~/.bashrc`/`~/.profile` with the full back-out
