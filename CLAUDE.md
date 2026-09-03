@@ -82,9 +82,10 @@ standard_error`, `ocean_temperature_error` → `sea_water_conservative_temperatu
 standard_error`.
 
 `nodd.py` (repo root) is the batch script form of the notebook (issue #5); it
-covers **both** products, since GOBAI HR shares RFROM's grid (issue #13).
-`RFROMV/rfrom_nodd.py` is a back-compat shim that forwards to it with every flag
-unchanged. Its `STREAMS` dict is the single place stream differences live, and
+covers **both** products, since GOBAI HR shares RFROM's grid (issue #13). (The
+`RFROMV/rfrom_nodd.py` back-compat shim from the promotion to root was removed
+once every in-flight VM run using it had finished — issue #16.) Its `STREAMS`
+dict is the single place stream differences live, and
 `PRODUCTS` holds the per-product bucket / default version / scratch default. It
 requires an explicit `--stream` plus an explicit `--blocks RANGE` or `--all` —
 nothing is processed implicitly. Run one stream at a time (one VM per stream, or split a
@@ -96,15 +97,20 @@ design decisions.
 The script also runs off-hub (bare VM, laptop): `NODD_SCRATCH_DIR` and
 `NODD_GCS_TOKEN` override the two hub paths, with the hub values as defaults (the
 older `RFROM_`-prefixed names are still honoured; the scratch default is
-per-product, `rfromv-scratch` vs `gobai-scratch`). `RFROMV/{requirements.txt,pixi.toml,environment.yml}` carry the same
-dependency set for venv+pip / pixi / conda, and `RFROMV/README.md` has the full
-"Running off-hub" setup.
+per-product, `rfromv-scratch` vs `gobai-scratch`). The repo-root `requirements.txt`
+carries the pip dependency set for both products (pixi/conda manifests were
+dropped — issue #16, venv+pip only), and the repo-root `setup.md` has the
+full off-hub walkthrough (also printed by `python nodd.py --setup`). The
+per-product READMEs (`RFROMV/README.md`, `GOBAI-O2/README.md`) carry the
+quickstart and stream tables and point to `setup.md` for setup, and to
+`python nodd.py --help` for the flag reference — don't duplicate flag docs into
+the READMEs (issue #16).
 
 **`RFROMV/setup_bare_VM.txt` is Eli's personal cheat-sheet**, not pipeline code
 and not generated docs — the raw shell commands he pastes to stand up a bare VM,
 since he does not always work on a JupyterHub where everything is preinstalled.
-It is deliberately informal and overlaps the README on purpose. Do not tidy,
-restructure, or "sync" it, and do not treat a difference from the README as a bug
+It is deliberately informal and overlaps `setup.md` on purpose. Do not tidy,
+restructure, or "sync" it, and do not treat a difference from `setup.md` as a bug
 to fix; leave it alone unless Eli asks.
 
 ### Two constraints that are easy to break
