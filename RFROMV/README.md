@@ -136,7 +136,7 @@ python3 --version                        # must be 3.11+
 #   don't build on the Xcode-provided python3.
 ```
 
-Then create and populate the environment:
+Then create and populate the environment. Make sure the .ven is activated `source .venv/bin/activate`
 
 ```sh
 python3 -m venv .venv
@@ -229,7 +229,7 @@ Then authenticate:
 
 ```sh
 gcloud auth application-default login          # opens a browser
-gcloud auth application-default set-quota-project <your-gcp-project>
+#gcloud auth application-default set-quota-project <your-gcp-project> # not really needed
 
 export RFROM_GCS_TOKEN="$HOME/.config/gcloud/application_default_credentials.json"
 ```
