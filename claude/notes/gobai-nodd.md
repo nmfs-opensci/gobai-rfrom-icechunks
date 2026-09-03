@@ -152,6 +152,14 @@ RFROM** — RFROM blocks are already in the bucket without them, and switching
 mid-stream would leave that published tree inconsistent with itself. Flip the
 flag for RFROM at the next version reprocess.
 
+**Decided (Eli, 2026-09-03): keep as coded.** Both fixes are metadata-only —
+they don't touch data values, and RFROM's already-published blocks pass
+`cfchecker` clean without them — so there's no correctness reason to force a
+reprocess. Re-running and re-uploading every published RFROM block (6 streams
+× up to 18 blocks, hundreds of GB) just for two attribute tweaks isn't worth
+it now. Revisit when RFROM gets a real reprocess (e.g. a v2.4 bump), not on
+its own.
+
 ## Validation (block 17, run end to end 2026-09-03)
 
 `python nodd.py --stream o2 --blocks 17 --no-upload --keep-scratch` — the 19-step
