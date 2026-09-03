@@ -6,18 +6,22 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 ## Repo state
 
 - Repo: `nmfs-opensci/gobai-rfrom-icechunks`, working on `/home/jovyan/gobai-rfrom-icechunks`.
-- Branch: `main`. **No open PRs.** PR #19 (`issue-15-cleanup-rfromv-notebooks`,
-  issue #15) merged 2026-09-03; branch deleted, issue #15 auto-closed. PR #18
-  (`issue-16-cleanup-help-readme`, issue #16) merged 2026-09-03; branch deleted,
-  issue #16 auto-closed. PR #14 (`gobai-nodd-script`, issue #13) reviewed by Eli
-  2026-09-03 and merged earlier the same day; branch deleted, issue #13
-  auto-closed. Every earlier task branch (`rfromv-nodd-processing` #4,
-  `rfromv-nodd-batch-script` #6, `local-mac-run` #7, `scratch-dir-error` #9,
-  `fix-h5py-dep` #10, `fix-erddap-download` #12) is also merged and deleted.
+- Branch: `main`. **No open PRs. Issue #21 is open** (RFROM v2.2 Ocean Heat
+  Content → NODD; not started). PR #22 (`issue-20-rfromv-v22-v21-nodd`, issue
+  #20) merged 2026-09-03; branch deleted, issue #20 auto-closed. PR #19
+  (`issue-15-cleanup-rfromv-notebooks`, issue #15) merged 2026-09-03; branch
+  deleted, issue #15 auto-closed. PR #18 (`issue-16-cleanup-help-readme`, issue
+  #16) merged 2026-09-03; branch deleted, issue #16 auto-closed. PR #14
+  (`gobai-nodd-script`, issue #13) reviewed by Eli 2026-09-03 and merged
+  earlier the same day; branch deleted, issue #13 auto-closed. Every earlier
+  task branch (`rfromv-nodd-processing` #4, `rfromv-nodd-batch-script` #6,
+  `local-mac-run` #7, `scratch-dir-error` #9, `fix-h5py-dep` #10,
+  `fix-erddap-download` #12) is also merged and deleted.
 - **The batch script lives at the repo root as `nodd.py`** (PR #14), covering
-  RFROM's six streams and GOBAI's two. `RFROMV/rfrom_nodd.py`, the back-compat
-  shim from that promotion, is **removed** (PR #18/issue #16) — every VM run
-  still using it had finished.
+  RFROM v2.3's six streams, RFROM v2.2/v2.1's three (`temp_v22`, `sal_v22`,
+  `temp_v21`, PR #22/issue #20), and GOBAI's two. `RFROMV/rfrom_nodd.py`, the
+  back-compat shim from that promotion, is **removed** (PR #18/issue #16) —
+  every VM run still using it had finished.
 - **Off-hub setup is now venv+pip only** (PR #18/issue #16): the single
   `requirements.txt` moved from `RFROMV/` to the repo root next to `nodd.py`;
   `pixi.toml`/`environment.yml` are deleted. The full walkthrough moved out of
@@ -42,6 +46,20 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 - Unfixed findings → one GitHub issue per probable root cause.
 
 ## In progress / next
+
+- **RFROM v2.2/v2.1 temp+salinity → NODD** (issue #20, DONE — PR #22 merged
+  2026-09-03, branch `issue-20-rfromv-v22-v21-nodd` deleted). The issue's
+  original v2.2 URLs (`argo_rfromv22`/`_realtime`/`_error`) turned out to be a
+  different product, Ocean Heat Content anomaly on a different vertical grid
+  (`mean_depth`, 10 levels, vs. temp/sal's `mean_pressure`, 58) — split out to
+  **issue #21 (open, not started)**. The real v2.2/v2.1 temp/sal datasets
+  (`argo_rfromv22_temp`, `argo_rfromv22_sal`, `argo_rfromv21_temp`) share
+  v2.3's grid exactly and have no realtime/error split, so they landed as
+  three new `nodd.py` streams (`temp_v22`, `sal_v22`, `temp_v21`) reusing the
+  existing pipeline unchanged, plus a per-stream `"version"` override so a
+  forgotten `--version` flag can't misfile output into the v2.3 tree. Full
+  recon in **`claude/notes/rfromv-v21-v22-nodd.md`**. Eli has since started
+  production runs and confirmed they're working.
 
 - **Clean up RFROMV notebooks** (issue #15, DONE — PR #19 merged 2026-09-03,
   branch `issue-15-cleanup-rfromv-notebooks` deleted). Folded the useful
