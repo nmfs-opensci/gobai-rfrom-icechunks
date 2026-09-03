@@ -88,11 +88,9 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   per-volume standard_name vs. per-mass units mismatch (RFROM-salinity redux) —
   **awaiting Sharp's reply**; do not change the `no3` CF mapping in `nodd.py`
   until that lands.
-  **Next: production runs, one VM per stream** —
+  **Production runs are in progress** (as of 2026-09-03), one VM per stream —
   `python nodd.py --stream o2 --all` and `python nodd.py --stream no3 --all`.
-  `git pull` first on each VM to pick up `nodd.py` from `main`. Idempotent
-  (safe to interrupt/re-run, uploaded blocks are skipped). Nothing uploaded to
-  `gs://noaa-oar-gobai` yet as of this handoff — still only its `index.html`.
+  Idempotent (safe to interrupt/re-run, uploaded blocks are skipped).
 
 - **ERDDAP download timeout + re-download** (issue #11, DONE — PR #12 merged,
   `main` @ `a28b921`, branch deleted). Both symptoms had one cause: the `requests.head()`
