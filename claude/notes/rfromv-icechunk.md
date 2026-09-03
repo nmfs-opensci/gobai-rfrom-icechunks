@@ -142,7 +142,7 @@ On real data, before any restructure was run:
   spec: the store reads from zarr-python but may not open in other Zarr
   implementations. Document this for users.
 
-## 8. Separate finding: `temp_error` netCDFs are labelled v2.2
+## 8. Separate finding: `temp_error` netCDFs are labelled v2.2 (issue #25)
 
 All 18 published `temp_error` files carry `title = "RFROM v2.2"` and
 `references = "Lyman, J.M. and G.C. Johnson. 2026. submitted"`, while every other
@@ -151,9 +151,13 @@ is a file-level global attribute ERDDAP serves for `argo_rfromv23_temp_error` â€
 ERDDAP's own dataset title is correct ("ARGO RFROM v2.3 Temperature error data"),
 so `nodd.py` passed through a bad upstream attribute, and the newly rebuilt tail
 block still has it. Affects the **published netCDFs**, not just this store. Same
-class as the salinity mislabel. Needs its own issue and probably a word to the
-data author; deliberately not fixed here, because overriding it on one rebuilt
-block would make that stream inconsistent with its own other 17 files.
+class as the salinity mislabel. Tracked as **issue #25**, with the evidence that
+it is a label and not a data problem: `title` and `references` are the only
+attributes that differ from the other v2.3 streams, and there is no v2.2
+temperature-error product on this grid at all (`argo_rfromv22_error` is
+dimensioned on `depth` â€” it is the OHC anomaly product, issue #21). Deliberately
+not fixed here, because overriding it on one rebuilt block would make that stream
+inconsistent with its own other 17 files.
 
 ## 9. Reusability
 
