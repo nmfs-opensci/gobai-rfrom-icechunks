@@ -5,6 +5,11 @@ git clone https://github.com/nmfs-opensci/gobai-rfrom-icechunks.git
 cd gobai-rfrom-icechunks/RFROMV
 sudo apt-get update
 sudo apt-get install -y python3-venv python3-pip
+sudo apt update && sudo apt install gh
+
+git config --global user.email "eli.holmes@noaa.gov"
+git config --global user.name "eeh"
+git config --global pull.rebase false
 
 python3 -m venv .venv
 source .venv/bin/activate
