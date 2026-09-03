@@ -3,8 +3,9 @@
 Prepares RFROM gridded Argo temperature/salinity fields (v2.3, v2.2, v2.1) for
 the NOAA Open Data Dissemination (NODD) GCP bucket `gs://noaa-oar-rfrom`.
 Source files come from PMEL ERDDAP; outputs are CF-compliant, rechunked,
-compressed netCDFs laid out per stream under `netcdf/<version>/<stream>/`,
-ready to be virtualized into a downstream Icechunk / VirtualiZarr store.
+compressed netCDFs laid out per stream under `netcdf/<version>/<stream>/`, which
+are then virtualized into an Icechunk store under `icechunk/<version>` by
+[`../build_icechunk.py`](../build_icechunk.py) — see "The Icechunk store" below.
 
 Per output file the pipeline is:
 
@@ -20,24 +21,33 @@ ERDDAP monthly netCDFs
 The 1670-step stable record splits into 17 blocks; output files are named e.g.
 `RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc`.
 
-## The six product streams (RFROM v2.3)
+## The product streams (RFROM v2.3)
 
 These are the current **v2.3** products, published under `netcdf/v2.3/` in the
-bucket. New versions reprocess all data into a new `netcdf/<version>/` tree; the
+bucket. `temp` and `sal` each publish **one continuous series** spanning both of
+PMEL's ERDDAP datasets — the settled record plus the realtime extension that
+continues it. They replace the four `*_stable` / `*_realtime` streams, which
+published the same weeks as two separate series; that split made a virtual
+Icechunk store impossible (issue #17, and "Restructuring the v2.3 tree" below).
+Which weeks are provisional is recorded in the Icechunk store's `data_mode` flag
+rather than in the file layout. New versions reprocess all data into a new `netcdf/<version>/` tree; the
 script's `--version` flag (default `v2.3`) sets the prefix. Each ERDDAP
 dataset_id below links to its griddap data-access page.
 
-| stream | version | ERDDAP dataset | data variable | units |
+| stream | ERDDAP dataset(s) | data variable | units | steps |
 |---|---|---|---|---|
-| `temp_stable`   | v2.3 | [`argo_rfromv23_temp`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_temp.html)                   | `ocean_temperature`       | degree_Celsius |
-| `temp_realtime` | v2.3 | [`argo_rfromv23_temp_realtime`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_temp_realtime.html) | `ocean_temperature`       | degree_Celsius |
-| `temp_error`    | v2.3 | [`argo_rfromv23_temp_error`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_temp_error.html)       | `ocean_temperature_error` | degree_Celsius |
-| `sal_stable`    | v2.3 | [`argo_rfromv23_sal`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_sal.html)                     | `ocean_salinity`          | g/kg † |
-| `sal_realtime`  | v2.3 | [`argo_rfromv23_sal_realtime`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_sal_realtime.html)   | `ocean_salinity`          | g/kg † |
-| `sal_error`     | v2.3 | [`argo_rfromv23_sal_error`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_sal_error.html)         | `ocean_salinity_error`    | grams_per_kilogram |
+| `temp`       | [`argo_rfromv23_temp`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_temp.html) + [`..._temp_realtime`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_temp_realtime.html) | `ocean_temperature`       | degree_Celsius | 1719 |
+| `sal`        | [`argo_rfromv23_sal`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_sal.html) + [`..._sal_realtime`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_sal_realtime.html) | `ocean_salinity`          | g/kg † | 1719 |
+| `temp_error` | [`argo_rfromv23_temp_error`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_temp_error.html) | `ocean_temperature_error` | degree_Celsius | 1719 |
+| `sal_error`  | [`argo_rfromv23_sal_error`](https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_sal_error.html)   | `ocean_salinity_error`    | grams_per_kilogram | 1719 |
 
-Stable runs 1993→2024 (1670 steps); error and realtime extend to 2025. Realtime
-is a moving draft that is eventually reprocessed into stable on a new version.
+All four run 1993-01-01 → 2025-12-05 weekly, 18 blocks (17 × 100 + 19). The 2025
+weeks are provisional and will be reprocessed into the settled record; that is
+what `data_mode` marks in the Icechunk store.
+
+The superseded streams `temp_stable`, `temp_realtime`, `sal_stable` and
+`sal_realtime` are still defined in `nodd.py` — they built the tree that is
+published today, and the entries are what the migration copies from.
 
 † `ocean_salinity` is **absolute salinity (TEOS-10) in g/kg**, confirmed by the
 data author. ERDDAP labels the variable `sea_water_practical_salinity` / `PSU`,
@@ -67,6 +77,74 @@ anomaly, on a different, coarser vertical grid (`mean_depth`, 10 levels, vs.
 temp/sal's `mean_pressure`, 58 levels) — not variants of temperature/salinity.
 Tracked separately as [issue #21](https://github.com/nmfs-opensci/gobai-rfrom-icechunks/issues/21).
 
+## Restructuring the v2.3 tree (issue #17)
+
+The published tree has to move from six streams to four before the Icechunk store
+can be built. **Blocks 0–15 do not need rebuilding** — they are the same weeks
+from the same monthly sources, so they are copied server-side inside the bucket
+rather than re-downloaded (~200 GB of ERDDAP traffic saved). Only the seam and the
+tails are new work: about 16 GB downloaded, 19 GB written.
+
+```sh
+# 1. Copy blocks 0-15 of each stable stream to the new prefix, renaming as we go.
+#    `head -n -1` drops the short final block (2023-09-01_2024-12-27), which is
+#    superseded by the new block 16.
+for L in temp sal; do
+  gcloud storage ls "gs://noaa-oar-rfrom/netcdf/v2.3/${L}_stable/*.nc" | sort | head -n -1 |
+  while read -r f; do
+    gcloud storage cp "$f" \
+      "gs://noaa-oar-rfrom/netcdf/v2.3/$L/$(basename "$f" | sed 's/_STABLE_/_/')"
+  done
+done
+
+# 2. Build the two new blocks per variable: block 16 spans the stable/realtime
+#    seam, block 17 is the padded 19-step tail.
+python nodd.py --stream temp --blocks 16,17
+python nodd.py --stream sal  --blocks 16,17
+
+# 3. Rewrite the error tails so their time chunk is 100 rather than 19.
+python nodd.py --stream temp_error --blocks 17 --force
+python nodd.py --stream sal_error  --blocks 17 --force
+
+# 4. Check the result: all four streams should show 18 files.
+python build_icechunk.py --store rfrom_v23 --list
+```
+
+Deleting the old `temp_stable` / `temp_realtime` / `sal_stable` / `sal_realtime`
+prefixes is a separate, NODD-visible decision — the store does not need it, and
+anyone who has linked to those files would break. Left for a human to make.
+
+**Weekly realtime updates** rewrite only the tail block (`--blocks 17 --force`,
+~1.5 GB) until it reaches 100 steps, at which point it becomes a full block and a
+new tail starts. When PMEL promotes the 2025 weeks into the settled record,
+rebuild blocks 16–17 and move `realtime_start` in `build_icechunk.py`.
+
+## The Icechunk store
+
+[`../build_icechunk.py`](../build_icechunk.py) merges all four streams into one
+virtual Icechunk store at `gs://noaa-oar-rfrom/icechunk/v2.3` — one dataset, one
+1719-step time axis, four science variables plus a `data_mode(time)` flag. It is
+**100 % virtual**: the netCDFs stay where they are, nothing is copied, and the
+store itself is a few MB.
+
+```sh
+python build_icechunk.py --store rfrom_v23 --list                 # what gets referenced
+python build_icechunk.py --store rfrom_v23 --local-repo /tmp/x    # full dry run, no upload
+python build_icechunk.py --store rfrom_v23                        # build and validate
+python build_icechunk.py --store rfrom_v23 --validate             # re-check a built store
+```
+
+Run [`icechunk-smoke-test.ipynb`](icechunk-smoke-test.ipynb) first — it builds a
+small store into a local throwaway repository and checks the values against the
+source netCDFs. The design decisions, the measurements behind them, and the
+reader recipe are in
+[`../claude/notes/rfromv-icechunk.md`](../claude/notes/rfromv-icechunk.md).
+
+Two constraints the netCDFs must satisfy, both enforced with named errors:
+every file feeding one variable shares one chunk grid, and only the **last** file
+may be short (written with an unlimited time dimension so HDF5 pads its edge
+chunk). Zarr has no variable-length chunks, so a store cannot paper over either.
+
 ## Files in this directory
 
 ### Deliverables
@@ -82,6 +160,12 @@ Tracked separately as [issue #21](https://github.com/nmfs-opensci/gobai-rfrom-ic
   `nodd.py` is this notebook generalized to all six streams — the notebook
   remains the readable, step-annotated explanation of *why* each stage is the way
   it is.
+- **`../build_icechunk.py`** — builds the virtual Icechunk store from the
+  published netCDFs (GitHub issue #17). Config-driven like `nodd.py`; also
+  configured for GOBAI HR. See "The Icechunk store" above.
+- **`icechunk-smoke-test.ipynb`** — run this before building the real store, and
+  after any change to `build_icechunk.py`. Builds a small store into a local
+  temporary repository and validates it against the source netCDFs.
 - **`index.html`** — landing page for the published product.
 - **`../requirements.txt`** — pip dependencies for running `nodd.py` off-hub.
   Only needed off-hub; see "Running off-hub" below.
