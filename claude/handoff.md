@@ -28,6 +28,22 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 ## In progress / next
 
+- **IMMEDIATE NEXT TASK — GOBAI-O2 → NODD, analysis + plan.** Same goal as the
+  RFROM work but a different product and a different author: analyze the GOBAI
+  files on PMEL ERDDAP, then propose a processing plan for NODD. Reconnaissance is
+  already done and written up in **`claude/notes/gobai-nodd.md`** — read that
+  first. Headlines: ERDDAP has two datasets, `gobai_o2_hr_v10` and
+  `gobai_no3_hr_v10` (**HR-v1.0, weekly** — NOT the v2.3-monthly-from-NCEI product
+  in `GOBAI-O2/gobai-o2-monthly-icechunk-sc.ipynb`; do not conflate them); the grid
+  is *identical* to RFROM v2.3 `(1719, 58, 720, 1440)` so `rfrom_nodd.py` should
+  transfer nearly as-is at 18 blocks of 100; 396 monthly files and ~0.41 TB per
+  dataset; and `o2`/`mean_pressure` carry **no `standard_name`** with units as the
+  non-CF string `"micromole per kilogram"`, so a CF pass is needed. Six open
+  questions for Eli/the author are listed at the end of that note (NO3 in scope?
+  target bucket? `v1.0` vs the `v202606` in the filenames? realtime sibling? CF
+  names? `mean_pressure_bnds`?). Next concrete step: download **one** monthly file
+  and inspect it before designing anything. No GitHub issue is open for this yet.
+
 - **ERDDAP download timeout + re-download** (issue #11, DONE — PR #12 merged,
   `main` @ `a28b921`, branch deleted). Both symptoms had one cause: the `requests.head()`
   at the top of `download()`. ERDDAP's `/files/` endpoint serves these netCDFs
