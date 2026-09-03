@@ -27,7 +27,18 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 ## In progress / next
 
-- **IMMEDIATE NEXT TASK — more `settings.json` work.** This is Claude Code config,
+- **IMMEDIATE NEXT TASK — issue #11, `sal_realtime` on the bare VM.** Two symptoms
+  in one report, likely two separate causes; not yet investigated. (a) `download()`
+  died on a bare `TimeoutError: The read operation timed out` from ERDDAP mid-file —
+  there is no retry anywhere in the download path, so one flaky read kills the run
+  and the `.part` file is orphaned. (b) Eli says files "already downloaded" were
+  fetched again; first thing to check is whether the earlier run cleaned scratch
+  (no `--keep-scratch` ⇒ `process_block` deletes the block's monthlies after a
+  successful write), and only then whether the HEAD `Content-Length` size-match in
+  `download()` is failing. Note the prior run was `temp_realtime`, a *different*
+  file set from `sal_realtime`, which alone could explain (b).
+  https://github.com/nmfs-opensci/gobai-rfrom-icechunks/issues/11
+- **`settings.json` work (deferred behind #11).** This is Claude Code config,
   not RFROM data work. The portable config lives in the **`~/claude-config`** repo
   (symlinked into `~/.claude` by `bootstrap.sh`); auth/account toggling (personal
   vs Bedrock) is machine-local in `~/.bashrc`/`~/.profile` with the full back-out
@@ -61,8 +72,8 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   Downloads already resume — `download()` skips any file whose size matches the
   ERDDAP `Content-Length` — so Eli re-runs after `pip install h5py` and the 12
   files already in his scratch dir are re-used. **Only the hub env has h5py
-  preinstalled; that is why this class of bug is invisible here.** Eli still has
-  to install h5py in his VM's `.venv` and finish the `temp_realtime` run.
+  preinstalled; that is why this class of bug is invisible here.** Eli has since
+  installed h5py on the VM and moved on to `sal_realtime`, which hit issue #11.
 - **RFROM batch script** (issue #5, DONE — PR #6 merged):
   `RFROMV/rfrom_nodd.py`, the notebook generalized to all six streams
   (`--stream`-parameterized, `--blocks`/`--all`, idempotent). Full spec, the
