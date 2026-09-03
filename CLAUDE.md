@@ -82,9 +82,10 @@ standard_error`, `ocean_temperature_error` → `sea_water_conservative_temperatu
 standard_error`.
 
 `nodd.py` (repo root) is the batch script form of the notebook (issue #5); it
-covers **both** products, since GOBAI HR shares RFROM's grid (issue #13).
-`RFROMV/rfrom_nodd.py` is a back-compat shim that forwards to it with every flag
-unchanged. Its `STREAMS` dict is the single place stream differences live, and
+covers **both** products, since GOBAI HR shares RFROM's grid (issue #13). (The
+`RFROMV/rfrom_nodd.py` back-compat shim from the promotion to root was removed
+once every in-flight VM run using it had finished — issue #16.) Its `STREAMS`
+dict is the single place stream differences live, and
 `PRODUCTS` holds the per-product bucket / default version / scratch default. It
 requires an explicit `--stream` plus an explicit `--blocks RANGE` or `--all` —
 nothing is processed implicitly. Run one stream at a time (one VM per stream, or split a
@@ -96,8 +97,9 @@ design decisions.
 The script also runs off-hub (bare VM, laptop): `NODD_SCRATCH_DIR` and
 `NODD_GCS_TOKEN` override the two hub paths, with the hub values as defaults (the
 older `RFROM_`-prefixed names are still honoured; the scratch default is
-per-product, `rfromv-scratch` vs `gobai-scratch`). `RFROMV/{requirements.txt,pixi.toml,environment.yml}` carry the same
-dependency set for venv+pip / pixi / conda, and the repo-root `setup.md` has the
+per-product, `rfromv-scratch` vs `gobai-scratch`). The repo-root `requirements.txt`
+carries the pip dependency set for both products (pixi/conda manifests were
+dropped — issue #16, venv+pip only), and the repo-root `setup.md` has the
 full off-hub walkthrough (also printed by `python nodd.py --setup`). The
 per-product READMEs (`RFROMV/README.md`, `GOBAI-O2/README.md`) carry the
 quickstart and stream tables and point to `setup.md` for setup, and to

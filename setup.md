@@ -32,18 +32,14 @@ after a block has already been downloaded (issue #8). Install from one of the
 manifests below rather than by hand and this is taken care of; `nodd.py`
 also checks for it up front and exits before downloading anything.
 
-Three manifests are checked in, one per tool — `RFROMV/requirements.txt` (venv +
-pip), `RFROMV/pixi.toml` (pixi), `RFROMV/environment.yml` (conda/mamba). They
-declare the same dependency set, so they are interchangeable, and they cover both
-products. A bare VM has none of these tools preinstalled, so each option below
-starts from nothing.
+One manifest is checked in — `requirements.txt`, at the repo root next to
+`nodd.py` — and it covers both products. A bare VM has no venv preinstalled, so
+start from nothing:
 
 ```sh
 git clone https://github.com/nmfs-opensci/gobai-rfrom-icechunks.git
-cd gobai-rfrom-icechunks/RFROMV
+cd gobai-rfrom-icechunks
 ```
-
-### Option A — venv + pip (lightest; nothing beyond Python itself)
 
 A bare Debian/Ubuntu image ships `python3` but usually splits out the `venv` and
 `pip` modules, so install those first — that is the whole prerequisite:
@@ -69,47 +65,8 @@ pip install -U pip
 pip install -r requirements.txt
 ```
 
-### Option B — pixi (self-contained, no root, no system Python)
-
-pixi is a single binary and brings its own Python, so it needs neither `sudo`
-nor a usable system interpreter — handy on a locked-down or minimal VM:
-
-```sh
-curl -fsSL https://pixi.sh/install.sh | sh     # or: wget -qO- https://pixi.sh/install.sh | sh
-# macOS alternative: brew install pixi
-```
-
-That drops the binary in `~/.pixi/bin` and adds it to your shell profile's PATH.
-Start a new shell (or `source ~/.bashrc`) so `pixi --version` resolves. Then, in
-`RFROMV/`:
-
-```sh
-pixi install                             # solves + installs from pixi.toml
-pixi shell                               # activated shell; run python directly
-# or run without activating, args passed through:
-pixi run nodd --stream temp_stable --all
-```
-
-Update it later with `pixi self-update` (or `brew upgrade pixi` if installed
-that way — don't mix the two).
-
-### Option C — conda / mamba
-
-Only worth it if you already have conda on the box; a fresh install is a heavy
-prerequisite for seven pure-Python-plus-wheels dependencies. If you want it
-anyway, Miniforge is the lean, conda-forge-default choice:
-
-```sh
-curl -fsSLO "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
-bash "Miniforge3-$(uname)-$(uname -m).sh"
-
-conda env create -f environment.yml       # or: mamba env create -f environment.yml
-conda activate rfromv-nodd
-```
-
-With venv or conda, re-activate in every new shell (and every new `tmux` pane) —
-the script must run inside the environment. `pixi run` needs no activation, but
-still needs the environment variables from steps 2–3 exported in that shell.
+Re-activate the venv in every new shell (and every new `tmux` pane) — the
+script must run inside it.
 
 ## 2. Scratch space
 
@@ -199,17 +156,14 @@ a file that does not exist.
 ## 4. Run it
 
 ```sh
-source .venv/bin/activate                             # or: conda activate rfromv-nodd
+source .venv/bin/activate
 export NODD_SCRATCH_DIR="$HOME/rfromv-scratch"
 export NODD_GCS_TOKEN="$HOME/.config/gcloud/application_default_credentials.json"
 
-python ../nodd.py --stream temp_stable --list          # plan only: no creds, no download
-python ../nodd.py --stream temp_stable --blocks 0      # smoke-test one block end to end
-python ../nodd.py --stream temp_stable --all           # the production run
+python nodd.py --stream temp_stable --list          # plan only: no creds, no download
+python nodd.py --stream temp_stable --blocks 0      # smoke-test one block end to end
+python nodd.py --stream temp_stable --all           # the production run
 ```
-
-Under pixi, drop the activation line and prefix each command with `pixi run`,
-e.g. `pixi run nodd --stream temp_stable --all`.
 
 The run prints the resolved scratch directory and destination prefix at startup —
 check those two lines before walking away.
@@ -222,10 +176,10 @@ dropped SSH session or a sleeping laptop can kill:
 ```sh
 tmux new -s rfrom                                     # then run inside; detach with Ctrl-b d
 # or, without tmux:
-nohup python ../nodd.py --stream temp_stable --all > temp_stable.log 2>&1 &
+nohup python nodd.py --stream temp_stable --all > temp_stable.log 2>&1 &
 
 # macOS: keep the machine awake for the whole run
-caffeinate -i python ../nodd.py --stream temp_stable --all
+caffeinate -i python nodd.py --stream temp_stable --all
 ```
 
 Interruptions are cheap. The script skips any block already present in the

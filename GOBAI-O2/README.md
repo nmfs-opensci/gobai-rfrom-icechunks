@@ -113,12 +113,12 @@ underlying field versions do not.
 ## Environment
 
 Identical to RFROMV's — same dependencies, same credentials mechanism, same
-scratch layout. The full walkthrough (venv / pixi / conda, gcloud auth, tmux for
-long runs) is in [`../setup.md`](../setup.md), or run `python ../nodd.py
---setup` to print it; everything there applies unchanged except the bucket you
-need write access to, which is `gs://noaa-oar-gobai`. The dependency manifests
-(`requirements.txt`, `environment.yml`, `pixi.toml`) live in `../RFROMV/` and
-cover both products.
+scratch layout. The full walkthrough (venv install, gcloud auth, tmux for long
+runs) is in [`../setup.md`](../setup.md), or run `python ../nodd.py --setup` to
+print it; everything there applies unchanged except the bucket you need write
+access to, which is `gs://noaa-oar-gobai`. The dependency manifest,
+`requirements.txt`, lives at the repo root next to `nodd.py` and covers both
+products.
 
 Two environment variables override the JupyterHub defaults so the script runs on
 a bare VM or a laptop:
