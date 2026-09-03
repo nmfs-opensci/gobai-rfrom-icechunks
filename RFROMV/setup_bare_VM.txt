@@ -1,11 +1,15 @@
 # Setup for a bare VM
 
+# run for both bare and cloned. for some reason doesn't clone over
+sudo apt update && sudo apt install gh
+
+#### if you cloned don't need to do any of the below. It will copy over
+
 sudo apt-get update && sudo apt-get install -y git curl tmux
 git clone https://github.com/nmfs-opensci/gobai-rfrom-icechunks.git
 cd gobai-rfrom-icechunks/RFROMV
 sudo apt-get update
 sudo apt-get install -y python3-venv python3-pip
-sudo apt update && sudo apt install gh
 
 git config --global user.email "eli.holmes@noaa.gov"
 git config --global user.name "eeh"
@@ -16,12 +20,17 @@ source .venv/bin/activate
 pip install -U pip
 pip install -r requirements.txt
 
+# install gcloud
 curl -fsSL https://sdk.cloud.google.com | bash     # then restart the shell:
 exec -l $SHELL
 
-gcloud auth application-default login          # opens a browser
-export RFROM_GCS_TOKEN="$HOME/.config/gcloud/application_default_credentials.json"
+# opens a browser and save token to "$HOME/.config/gcloud/application_default_credentials.json"
+gcloud auth application-default login  
 
+#### if you cloned don't need to do any of the above. It will copy over
+
+
+# test before running
 source .venv/bin/activate 
 export RFROM_SCRATCH_DIR="$HOME/rfromv-scratch"
 export RFROM_GCS_TOKEN="$HOME/.config/gcloud/application_default_credentials.json"
@@ -33,7 +42,8 @@ fs.pipe('noaa-oar-rfrom/netcdf/v2.3/_write_check.txt', b'ok'); print('write OK')
 fs.rm('noaa-oar-rfrom/netcdf/v2.3/_write_check.txt')
 "
 
-source .venv/bin/activate                             # or: conda activate rfromv-nodd
+# now run
+source .venv/bin/activate                             
 export RFROM_SCRATCH_DIR="$HOME/rfromv-scratch"
 export RFROM_GCS_TOKEN="$HOME/.config/gcloud/application_default_credentials.json"
 
