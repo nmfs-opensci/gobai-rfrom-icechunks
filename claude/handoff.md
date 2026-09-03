@@ -6,13 +6,10 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 ## Repo state
 
 - Repo: `nmfs-opensci/gobai-rfrom-icechunks`, working on `/home/jovyan/gobai-rfrom-icechunks`.
-- Branch: `main`. `CLAUDE.md` + `claude/` are committed. Task branches
-  `rfromv-nodd-processing` (PR #4), `rfromv-nodd-batch-script` (PR #6) and
-  `local-mac-run` (PR #7) are all merged.
-- **PR #9 OPEN** (branch `scratch-dir-error`): a one-hunk error-message fix in
-  `RFROMV/rfrom_nodd.py` — print the resolved scratch dir *before* `os.makedirs`
-  and turn the `OSError` into an argparse error naming `RFROM_SCRATCH_DIR`.
-  Tested, awaiting review. https://github.com/nmfs-opensci/gobai-rfrom-icechunks/pull/9
+- Branch: `main`, clean. `CLAUDE.md` + `claude/` are committed. **No open PRs and
+  no branches other than `main`, local or remote** — every task branch
+  (`rfromv-nodd-processing` #4, `rfromv-nodd-batch-script` #6, `local-mac-run` #7,
+  `scratch-dir-error` #9, `fix-h5py-dep` #10) is merged and deleted.
 - Untracked: `RFROMV/upload_to_nodd.ipynb` (Eli's sandbox — leave it alone).
 - `RFROMV/setup_bare_VM.txt` is **Eli's own scratch cheat-sheet**, not pipeline
   code and not generated docs — the shell commands he pastes to stand up a bare
@@ -52,6 +49,20 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   scratch, ~390 GB down / ~130 GB up per stable stream; wall-clock is
   network-bound, so a bigger instance does not help. Confirmed on Eli's VM:
   `gcloud auth application-default set-quota-project` is NOT needed.
+- **h5py missing off-hub** (issue #8, DONE — PR #10 merged, `main` @ `7d67046`).
+  `h5netcdf` declares `h5py` as an *optional extra* (`h5netcdf[h5py]`), not a hard
+  dependency, so a pip install from `requirements.txt` produced an engine with no
+  HDF5 backend: `import h5netcdf` works, xarray lists the engine, and the first
+  `open_mfdataset` dies with `No module named 'h5py'` — after the block's ~12 GB
+  had downloaded. Fix: `h5py>=3.12` added to all three manifests; new
+  `check_netcdf_engine()` preflight in `rfrom_nodd.py` called from `main()` next
+  to the credentials check (so a bad env fails in seconds, and `--list` still
+  needs no HDF5 stack); README's "h5netcdf brings its own HDF5" claim corrected.
+  Downloads already resume — `download()` skips any file whose size matches the
+  ERDDAP `Content-Length` — so Eli re-runs after `pip install h5py` and the 12
+  files already in his scratch dir are re-used. **Only the hub env has h5py
+  preinstalled; that is why this class of bug is invisible here.** Eli still has
+  to install h5py in his VM's `.venv` and finish the `temp_realtime` run.
 - **RFROM batch script** (issue #5, DONE — PR #6 merged):
   `RFROMV/rfrom_nodd.py`, the notebook generalized to all six streams
   (`--stream`-parameterized, `--blocks`/`--all`, idempotent). Full spec, the
@@ -61,8 +72,10 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 ## Follow-ups (not blocking)
 
-- After PR #9 merges, delete the `scratch-dir-error` branch (and the already-merged
-  `rfromv-nodd-batch-script` / `local-mac-run` branches if still present).
+- The off-hub manifests are unverified by installation — nothing in this repo
+  installs `requirements.txt`/`pixi.toml`/`environment.yml` from scratch, which is
+  exactly how issue #8 got through. A clean-venv smoke install would catch the next
+  one.
 - Nothing in the off-hub path has been run end to end from a bare VM by an agent;
   Eli has done it by hand. If it is ever automated, that is the gap to close.
 - `update_nodd.py` — weekly realtime reconcile (re-download the moving realtime
