@@ -27,17 +27,26 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 ## In progress / next
 
-- **IMMEDIATE NEXT TASK — issue #11, `sal_realtime` on the bare VM.** Two symptoms
-  in one report, likely two separate causes; not yet investigated. (a) `download()`
-  died on a bare `TimeoutError: The read operation timed out` from ERDDAP mid-file —
-  there is no retry anywhere in the download path, so one flaky read kills the run
-  and the `.part` file is orphaned. (b) Eli says files "already downloaded" were
-  fetched again; first thing to check is whether the earlier run cleaned scratch
-  (no `--keep-scratch` ⇒ `process_block` deletes the block's monthlies after a
-  successful write), and only then whether the HEAD `Content-Length` size-match in
-  `download()` is failing. Note the prior run was `temp_realtime`, a *different*
-  file set from `sal_realtime`, which alone could explain (b).
-  https://github.com/nmfs-opensci/gobai-rfrom-icechunks/issues/11
+- **ERDDAP download timeout + re-download** (issue #11, FIXED — PR #12 open,
+  branch `fix-erddap-download`). Both symptoms had one cause: the `requests.head()`
+  at the top of `download()`. ERDDAP's `/files/` endpoint serves these netCDFs
+  `Content-Encoding: gzip` + `Transfer-Encoding: chunked`, so there is **no
+  `Content-Length`** — the skip test `... and remote_size and ...` was dead code
+  (`remote_size` always 0) and every re-run re-downloaded ~12 GB per block. The same
+  HEAD is the crash site: measured from the hub it takes **36–45 s** against the old
+  `timeout=60`, and there was no retry anywhere in the download path. That is the
+  hub-vs-VM split Eli saw — steady on the hub all day, dead on all 3 VMs: everyone
+  is near the cliff, only the VMs cross it. The forgotten `git pull` on the VM was a
+  red herring; `download()` was untouched since #5. Fix: HEAD removed outright (it
+  was useless *and* the crash site); completeness is now stream-to-`.part` →
+  verify it opens as HDF5/netCDF → atomic rename, so an existing file is known
+  complete (Range is unsupported — 416 — so a retry restarts that one file);
+  4 attempts with 15/30/60 s backoff, 4xx fails fast, `.part` cleaned up on every
+  failure path. Verified live: 46 s download, 0.00 s skip on re-run, truncation
+  rejected, 404 in 1.1 s without retry, injected mid-stream error recovers on
+  attempt 3. Diagnostic for Eli at `/home/jovyan/erddap-head-check.sh` (curl-only,
+  run on a VM to compare HEAD latency with the hub) — optional, since the fix
+  deletes the cliff rather than moving it.
 - **`settings.json` work (deferred behind #11).** This is Claude Code config,
   not RFROM data work. The portable config lives in the **`~/claude-config`** repo
   (symlinked into `~/.claude` by `bootstrap.sh`); auth/account toggling (personal
