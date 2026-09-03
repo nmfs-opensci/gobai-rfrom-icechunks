@@ -97,14 +97,18 @@ The script also runs off-hub (bare VM, laptop): `NODD_SCRATCH_DIR` and
 `NODD_GCS_TOKEN` override the two hub paths, with the hub values as defaults (the
 older `RFROM_`-prefixed names are still honoured; the scratch default is
 per-product, `rfromv-scratch` vs `gobai-scratch`). `RFROMV/{requirements.txt,pixi.toml,environment.yml}` carry the same
-dependency set for venv+pip / pixi / conda, and `RFROMV/README.md` has the full
-"Running off-hub" setup.
+dependency set for venv+pip / pixi / conda, and the repo-root `setup.md` has the
+full off-hub walkthrough (also printed by `python nodd.py --setup`). The
+per-product READMEs (`RFROMV/README.md`, `GOBAI-O2/README.md`) carry the
+quickstart and stream tables and point to `setup.md` for setup, and to
+`python nodd.py --help` for the flag reference — don't duplicate flag docs into
+the READMEs (issue #16).
 
 **`RFROMV/setup_bare_VM.txt` is Eli's personal cheat-sheet**, not pipeline code
 and not generated docs — the raw shell commands he pastes to stand up a bare VM,
 since he does not always work on a JupyterHub where everything is preinstalled.
-It is deliberately informal and overlaps the README on purpose. Do not tidy,
-restructure, or "sync" it, and do not treat a difference from the README as a bug
+It is deliberately informal and overlaps `setup.md` on purpose. Do not tidy,
+restructure, or "sync" it, and do not treat a difference from `setup.md` as a bug
 to fix; leave it alone unless Eli asks.
 
 ### Two constraints that are easy to break

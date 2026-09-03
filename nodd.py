@@ -55,8 +55,8 @@ The defaults assume the JupyterHub. Two paths are overridable so the script also
 runs on a bare VM or a laptop: ``NODD_SCRATCH_DIR`` (download + output scratch,
 needs ~35 GB free) and ``NODD_GCS_TOKEN`` (a credentials JSON path, or the
 keyword "google_default" to resolve ADC the usual way). The older ``RFROM_``-
-prefixed names are still honoured. See RFROMV/README.md or GOBAI-O2/README.md,
-"Running off-hub", for the venv + credentials setup.
+prefixed names are still honoured. Run ``--setup`` (or see setup.md) for the
+venv + credentials walkthrough.
 
 The hard-won correctness / performance choices from the notebook are preserved
 verbatim; see claude/notes/nodd-prep.md for the why. In short: open with
@@ -68,8 +68,10 @@ I/O-bound on the unchunked source files.
 
 import argparse
 import os
+import pydoc
 import sys
 import time
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -662,16 +664,38 @@ def parse_blocks(spec, n_blocks):
     return sorted(indices)
 
 
+SETUP_MD = Path(__file__).resolve().parent / "setup.md"
+
+EPILOG = """\
+Examples
+--------
+  python nodd.py --stream temp_stable --list           plan only, no download
+  python nodd.py --stream temp_stable --blocks 0       one block, smoke-test
+  python nodd.py --stream temp_stable --all            production run, one VM
+  python nodd.py --stream sal_stable --blocks 0-8      VM A of a split stream
+  python nodd.py --stream sal_stable --blocks 9-16     VM B, disjoint range
+  python nodd.py --stream o2 --all --no-upload --keep-scratch   local test run
+
+Setup (venv/pixi/conda, scratch disk, GCS credentials, tmux for long runs):
+  python nodd.py --setup
+
+This help covers every flag; RFROMV/README.md and GOBAI-O2/README.md have the
+per-product quickstart and stream tables.
+"""
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(
         description="Process PMEL ERDDAP netCDFs (RFROM v2.3 or GOBAI HR) into "
                     "NODD-bound files and upload.",
+        epilog=EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    p.add_argument("--stream", required=True, choices=sorted(STREAMS),
-                   help="Product stream to process (required; one at a time). "
+    p.add_argument("--stream", choices=sorted(STREAMS), default=None,
+                   help="Product stream to process (one at a time). "
                         "RFROM: temp_stable, temp_realtime, temp_error, sal_stable, "
-                        "sal_realtime, sal_error. GOBAI: o2, no3.")
+                        "sal_realtime, sal_error. GOBAI: o2, no3. Required unless "
+                        "--setup is given.")
     grp = p.add_mutually_exclusive_group()
     grp.add_argument("--blocks", metavar="RANGE",
                      help="Blocks to process, e.g. '3', '0-4', '0,2,5'. "
@@ -691,7 +715,17 @@ def main(argv=None):
                    help="Reprocess/overwrite even if the target object already exists.")
     p.add_argument("--keep-scratch", action="store_true",
                    help="Do not delete downloaded monthly files / local outputs.")
+    p.add_argument("--setup", action="store_true",
+                   help="Print the full off-hub setup walkthrough (setup.md) and exit: "
+                        "Python env, scratch disk, GCS credentials, long-run tips.")
     args = p.parse_args(argv)
+
+    if args.setup:
+        pydoc.pager(SETUP_MD.read_text())
+        return 0
+
+    if not args.stream:
+        p.error("--stream is required (or use --setup for setup instructions)")
 
     stream = args.stream
     product = PRODUCTS[STREAMS[stream]["product"]]
