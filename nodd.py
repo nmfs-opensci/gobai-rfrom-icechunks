@@ -636,8 +636,7 @@ def check_netcdf_engine(p):
         p.error(
             "the h5netcdf engine has no HDF5 backend: h5py is not installed.\n"
             "h5py is an optional extra of h5netcdf, so it is easy to miss. Install it:\n"
-            "    pip install h5py          (or: pip install -r requirements.txt)\n"
-            "    conda install -c conda-forge h5py"
+            "    pip install h5py          (or: pip install -r requirements.txt)"
         )
 
 
@@ -676,7 +675,7 @@ Examples
   python nodd.py --stream sal_stable --blocks 9-16     VM B, disjoint range
   python nodd.py --stream o2 --all --no-upload --keep-scratch   local test run
 
-Setup (venv/pixi/conda, scratch disk, GCS credentials, tmux for long runs):
+Setup (venv, scratch disk, GCS credentials, tmux for long runs):
   python nodd.py --setup
 
 This help covers every flag; RFROMV/README.md and GOBAI-O2/README.md have the

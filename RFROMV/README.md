@@ -54,9 +54,6 @@ overrides `sal_stable` / `sal_realtime` to `sea_water_absolute_salinity` /
   It lives at the repository root because GOBAI HR shares RFROM's grid and
   therefore this pipeline (issue #13); see [`../GOBAI-O2/README.md`](../GOBAI-O2/README.md).
   See "Running the batch script" below.
-- **`rfrom_nodd.py`** — a back-compat shim that forwards to `../nodd.py` with every
-  flag unchanged, so existing commands and `pixi run` tasks keep working. Prefer
-  `nodd.py` in new work.
 - **`prep-one-netcdf-for-NODD.ipynb`** — the tested single-file reference pipeline
   (GitHub issue #1, merged via PR #4). Run interactively cell-by-cell; it prepares
   and uploads **one** block so the workflow can be validated before scaling up.
@@ -64,9 +61,8 @@ overrides `sal_stable` / `sal_realtime` to `sea_water_absolute_salinity` /
   remains the readable, step-annotated explanation of *why* each stage is the way
   it is.
 - **`index.html`** — landing page for the published product.
-- **`requirements.txt`** / **`environment.yml`** / **`pixi.toml`** — the same
-  dependency set for pip, conda/mamba, and pixi respectively. Only needed off-hub;
-  see "Running off-hub" below.
+- **`../requirements.txt`** — pip dependencies for running `nodd.py` off-hub.
+  Only needed off-hub; see "Running off-hub" below.
 
 ### Sandbox (exploratory scratch — not part of the pipeline)
 
@@ -104,11 +100,10 @@ a shared machine; an explicit `NODD_SCRATCH_DIR` overrides both.
 
 Nothing about the pipeline needs the hub — it needs Python, ~35 GB of scratch
 disk, and credentials that can write to `gs://noaa-oar-rfrom`. The full
-walkthrough (venv/pixi/conda install, scratch space, GCS credentials, tmux for
-long runs, measured resource expectations) is in
-[`../setup.md`](../setup.md), or run `python ../nodd.py --setup` to print it.
-The dependency manifests it references — `requirements.txt`, `pixi.toml`,
-`environment.yml` — live in this directory.
+walkthrough (venv install, scratch space, GCS credentials, tmux for long runs,
+measured resource expectations) is in [`../setup.md`](../setup.md), or run
+`python ../nodd.py --setup` to print it. The dependency manifest it references,
+`requirements.txt`, lives at the repo root next to `nodd.py`.
 
 ## Running the batch script
 
