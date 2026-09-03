@@ -113,13 +113,12 @@ underlying field versions do not.
 ## Environment
 
 Identical to RFROMV's — same dependencies, same credentials mechanism, same
-scratch layout. The full walkthrough (venv / pixi / conda, gcloud auth, tmux for
-long runs) is in
-[`../RFROMV/README.md` § "Running off-hub"](../RFROMV/README.md#running-off-hub-bare-vm-or-macos);
-everything there applies unchanged except the bucket you need write access to,
-which is `gs://noaa-oar-gobai`. The dependency manifests
-(`requirements.txt`, `environment.yml`, `pixi.toml`) live in `../RFROMV/` and
-cover both products.
+scratch layout. The full walkthrough (venv install, gcloud auth, tmux for long
+runs) is in [`../setup.md`](../setup.md), or run `python ../nodd.py --setup` to
+print it; everything there applies unchanged except the bucket you need write
+access to, which is `gs://noaa-oar-gobai`. The dependency manifest,
+`requirements.txt`, lives at the repo root next to `nodd.py` and covers both
+products.
 
 Two environment variables override the JupyterHub defaults so the script runs on
 a bare VM or a laptop:
@@ -166,9 +165,8 @@ python nodd.py --stream no3 --blocks 9-17     # VM B
 ```
 
 The run prints the resolved scratch directory and destination prefix at startup —
-check those two lines before walking away. Flags are documented in
-[`../RFROMV/README.md` § Flags](../RFROMV/README.md#flags); they are the same set,
-with `--version` defaulting to `v202606` for these streams.
+check those two lines before walking away. Run `python ../nodd.py --help` for
+the full flag reference; `--version` defaults to `v202606` for these streams.
 
 ### Resource expectations (per stream)
 
