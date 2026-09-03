@@ -106,8 +106,10 @@ python nodd.py --stream sal  --blocks 16,17
 python nodd.py --stream temp_error --blocks 17 --force
 python nodd.py --stream sal_error  --blocks 17 --force
 
-# 4. Check the result: all four streams should show 18 files.
-python build_icechunk.py --store rfrom_v23 --list
+# 4. Verify before deleting anything: 18 files per stream, and every object
+#    carried over from the old tree byte-identical to its source (CRC32C,
+#    metadata only -- nothing is downloaded). Exits non-zero if not.
+python RFROMV/check_migration.py
 ```
 
 ### File names
@@ -139,18 +141,35 @@ Two consequences worth knowing:
   the machine-readable version of the same fact is `data_mode` in the Icechunk
   store, which never churns.
 
-Deleting the old `temp_stable` / `temp_realtime` / `sal_stable` / `sal_realtime`
-prefixes once the copy is verified:
+### Retiring the old prefixes
+
+GCS has no rename, so the four old directories (`temp_stable`, `temp_realtime`,
+`sal_stable`, `sal_realtime` — 225.5 GB) survive the copy and have to be deleted
+deliberately. Two things make that safe here:
+
+- **The public landing page does not link to them.** Its stream links point at the
+  ERDDAP source datasets (`data.pmel.noaa.gov/.../argo_rfromv23_temp_realtime/`),
+  which are unaffected; the page never references a `netcdf/` path.
+- **They were only published on 2026-09-02/03**, so nothing has had time to link
+  to them. That argument weakens the longer they stay up — this is the cheapest
+  moment to retire them.
+
+Nothing is lost. Three objects are *not* copied — the 70-step stable block 16 and
+the two realtime files — because the rebuilt blocks 16 and 17 contain exactly
+those weeks, re-blocked.
 
 ```sh
+python RFROMV/check_migration.py       # must exit 0
+python build_icechunk.py --store rfrom_v23 --local-repo /tmp/rehearsal   # must validate
+
 for d in temp_stable temp_realtime sal_stable sal_realtime; do
   gcloud storage rm --recursive "gs://noaa-oar-rfrom/netcdf/v2.3/$d"
 done
 ```
 
-Destructive and NODD-visible — anyone who linked to those paths breaks. Run it
-only after `python build_icechunk.py --store rfrom_v23 --list` shows 18 files in
-each of the four streams.
+Do not run the delete until both checks above pass. If something is wrong
+afterwards, everything is rebuildable from ERDDAP — but that is a multi-hour
+re-run, which is what the checks exist to avoid.
 
 **Weekly realtime updates** rewrite only the tail block (`--blocks 17 --force`,
 ~1.5 GB) until it reaches 100 steps, at which point it becomes a full block and a
@@ -204,6 +223,10 @@ chunk). Zarr has no variable-length chunks, so a store cannot paper over either.
 - **`icechunk-smoke-test.ipynb`** — run this before building the real store, and
   after any change to `build_icechunk.py`. Builds a small store into a local
   temporary repository and validates it against the source netCDFs.
+- **`check_migration.py`** — one-off verifier for the issue #17 restructure:
+  confirms the new four-stream tree is complete and that every copied object
+  matches its source by CRC32C, before the old prefixes are deleted. Can be
+  deleted once the migration is done.
 - **`index.html`** — landing page for the published product.
 - **`../requirements.txt`** — pip dependencies for running `nodd.py` off-hub.
   Only needed off-hub; see "Running off-hub" below.
