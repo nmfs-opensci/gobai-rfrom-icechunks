@@ -9,7 +9,8 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 - Branch: `main`, clean. `CLAUDE.md` + `claude/` are committed. **No open PRs and
   no branches other than `main`, local or remote** — every task branch
   (`rfromv-nodd-processing` #4, `rfromv-nodd-batch-script` #6, `local-mac-run` #7,
-  `scratch-dir-error` #9, `fix-h5py-dep` #10) is merged and deleted.
+  `scratch-dir-error` #9, `fix-h5py-dep` #10, `fix-erddap-download` #12) is merged
+  and deleted.
 - Untracked: `RFROMV/upload_to_nodd.ipynb` (Eli's sandbox — leave it alone).
 - `RFROMV/setup_bare_VM.txt` is **Eli's own scratch cheat-sheet**, not pipeline
   code and not generated docs — the shell commands he pastes to stand up a bare
