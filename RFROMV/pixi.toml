@@ -1,4 +1,4 @@
-# pixi environment for rfrom_nodd.py (see README.md, "Running off-hub").
+# pixi environment for the NODD batch script ../nodd.py (see README.md, "Running off-hub").
 #   pixi install && pixi run plan          # or: pixi shell
 [project]
 name = "rfromv-nodd"

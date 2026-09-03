@@ -5,8 +5,8 @@ way `RFROMV/` does for RFROM v2.3. Different product, different author.
 
 Recon 2026-09-03: ERDDAP metadata endpoints, plus **one real monthly file of each
 dataset downloaded and inspected** (`/home/jovyan/shared-public/gobai-scratch/erddap/`,
-`GOBAI-{O2,NO3}-HR-v202606-2020-06.nc`, ~0.96 GB each). Sections marked
-**DECISION NEEDED** are open; everything else is measured fact.
+`GOBAI-{O2,NO3}-HR-v202606-2020-06.nc`, ~0.96 GB each). Everything below is
+measured fact; the decisions Eli settled on review are at the end.
 
 ## What is on ERDDAP
 
@@ -111,55 +111,73 @@ sizes are identical): ~23–24 GB downloaded (23 monthly files), ~7–8 GB writt
 ~31–35 GB peak scratch. Per dataset: ~0.41 TB down, ~0.13 TB up, 18 blocks.
 Both datasets: ~0.83 TB down. Wall-clock is network-bound; a bigger VM does not help.
 
-## Plan (pending review — see DECISIONS below)
+## Plan — reviewed and implemented (PR for issue #13)
 
-1. **Share the code.** `rfrom_nodd.py` is already stream-parameterized; GOBAI needs
-   only two new `STREAMS` entries plus a per-stream bucket/prefix. Placement is a
-   DECISION.
-2. **Add `o2` and `no3` streams** — dataset_id, data_var, `var_attrs` from the CF
-   table above, `monthly_template = "GOBAI-{VAR}-HR-v202606-{year}-{month:02d}.nc"`,
-   an `out_template`, and the destination prefix.
-3. **CF pass**, on top of what the script already does: promote `Description` →
-   `long_name` (trim the trailing space, keep `Description`), set the standard_names
-   and units above, `positive`/`axis` on `mean_pressure`, `Conventions = "CF-1.10, ACDD-1.3"`,
-   append the repackaging note to `history`.
-4. **Encoding unchanged from RFROM**: on-disk `(100, 1, 180, 180)` float32,
-   zlib level 4 + shuffle, `_FillValue = NaN` on the data var and suppressed on
-   coordinates; read with `chunks={"mean_pressure": 1}` and
-   `data_vars="minimal", coords="minimal", compat="override"` so
-   `mean_pressure_bnds` is not broadcast against time.
-5. **Validate one block first** (block 17, the 19-step tail — smallest, 5 files,
-   ~5 GB) end to end before any full run, exactly as issue #1 did for RFROM.
-6. **`GOBAI-O2/README.md`** mirroring `RFROMV/README.md`: streams table, the CF
-   overrides and why, files in the directory, off-hub setup, run recipes,
-   resource expectations.
+Eli reviewed the plan 2026-09-03 and took the recommended option on all four
+forks. Resolved:
 
-## DECISIONS NEEDED from Eli
+1. **Code layout** — one shared script, `nodd.py` at the repo root, covering all
+   eight streams (RFROM's six + GOBAI's two). `RFROMV/rfrom_nodd.py` is now a
+   back-compat shim forwarding to it with every flag unchanged, so in-flight VM
+   commands and the `pixi run` tasks keep working. A `PRODUCTS` dict holds the
+   per-product bucket, default version and scratch default; `STREAMS` entries
+   name their product.
+2. **Bucket prefix** — `gs://noaa-oar-gobai/netcdf/v202606/{o2,no3}/`,
+   version-segmented like RFROM's `netcdf/v2.3/<stream>/`.
+3. **Version string** — `v202606`, the version stamped in the source filenames
+   *and* in each file's `title` global attribute. ERDDAP's dataset title says
+   `HR-v1.0`; the files win. `--version` overrides.
+4. **Output filenames** — `GOBAI-O2-HR-v202606_1993-01-01_1994-11-25.nc`: source
+   stem verbatim, underscore before the date range.
+5. **"preliminary"** — `comment` and `references` pass through verbatim.
+6. **Env vars** — `NODD_SCRATCH_DIR` / `NODD_GCS_TOKEN`, with the old `RFROM_`
+   names still honoured. Scratch defaults are per-product (`rfromv-scratch` vs
+   `gobai-scratch`) so concurrent runs do not collide.
+7. **Directory** — GOBAI work stays in `GOBAI-O2/` per the issue, with
+   `GOBAI-O2/README.md` noting that `no3` lives there too.
 
-1. **Code layout** — one shared script for both products (recommended: root
-   `nodd.py` + a back-compat shim at `RFROMV/rfrom_nodd.py`), a shared core module
-   with per-product wrappers, or a standalone copy in `GOBAI-O2/`.
-2. **Bucket prefix** — literally `netcdf/o2/` and `netcdf/no3/` as the issue says,
-   or version-segmented `netcdf/v1.0/o2/` to match RFROM's `netcdf/v2.3/<stream>/`
-   and leave room for a v2.
-3. **Version string** — files say `v202606` (in the filename *and* the `title`
-   global attr); ERDDAP's dataset title says `HR-v1.0`. Which goes in the prefix
-   and/or output filenames?
-4. **Output filename pattern** — proposed
-   `GOBAI-O2-HR-v202606_1993-01-01_1994-11-25.nc` (source stem, underscore before
-   the date range).
-5. **"preliminary"** — every file carries `comment = "preliminary"` and
-   `references = "... in prep."`. Is this cleared for NODD publication as-is, and
-   should the flag be preserved, reworded, or dropped?
-6. **CF names** — confirm `moles_of_oxygen_per_unit_mass_in_sea_water` /
-   `moles_of_nitrate_per_unit_mass_in_sea_water` with the author, and report the
-   inconsistent ERDDAP `no3` standard_name upstream.
-7. **Directory name** — NO3 landing in a folder called `GOBAI-O2/` is odd. Rename
-   to `GOBAI/`, or leave it?
+Everything else is unchanged from RFROM: 100-step blocks, on-disk
+`(100, 1, 180, 180)` float32 + zlib-4/shuffle, `_FillValue = NaN` on the data var
+and suppressed on coordinates, dask read `chunks={"mean_pressure": 1}`, and
+`data_vars="minimal", coords="minimal", compat="override"` so
+`mean_pressure_bnds` is not broadcast against time.
+
+### The `cf_refinements` product flag
+
+Two CF fixes were found while validating GOBAI that apply equally to RFROM:
+promoting the source's non-standard `Description` into a CF `long_name`, and
+suppressing the `_FillValue` xarray adds to `mean_pressure_bnds` (CF ch. 7.1 says
+a boundary variable should not have one). They are **ON for GOBAI, OFF for
+RFROM** — RFROM blocks are already in the bucket without them, and switching
+mid-stream would leave that published tree inconsistent with itself. Flip the
+flag for RFROM at the next version reprocess.
+
+## Validation (block 17, run end to end 2026-09-03)
+
+`python nodd.py --stream o2 --blocks 17 --no-upload --keep-scratch` — the 19-step
+tail block, the cheapest real test at 5 monthly files.
+
+- 5 files / 4.6 GB downloaded, output 1.34 GB, on-disk chunks `(19, 1, 180, 180)`
+  (time capped at the short block, as intended).
+- **Data bit-identical to source**: `np.array_equal(..., equal_nan=True)` on the
+  overlapping time steps; `latitude` / `longitude` / `mean_pressure` /
+  `mean_pressure_bnds` all `array_equal` to the source, and the bounds variable
+  kept its `(mean_pressure, vertices)` shape — not broadcast against time.
+- **`cfchecker` 4.1.0: 0 errors, 0 warnings** against CF-1.8 with standard name
+  table v94. Note the checker rejects the `Conventions = "CF-1.10, ACDD-1.3"`
+  string we write ("CF-1.10 is not a valid CF version") — that is a checker
+  limitation, not a file defect; re-running with `CF-1.8` in that attribute gives
+  a clean pass. The same applies to the RFROM output.
+- Re-running the same command skipped all five downloads in 0 s (idempotency),
+  and `--blocks 18` / `--stream bogus` are rejected.
+
+Not yet run: any upload, and any `no3` block. Nothing has been written to
+`gs://noaa-oar-gobai`.
 
 ## Method note
 
 ERDDAP metadata came from `search/index.json`, `info/<ds>/index.json`,
 `files/<ds>/.json`, `griddap/<ds>.csv?time` — no downloads needed for any of it.
-The two sample files are in `/home/jovyan/shared-public/gobai-scratch/erddap/`
-(~1.9 GB); delete when done prototyping.
+Sample and test files are in `/home/jovyan/shared-public/gobai-scratch/`
+(~7.5 GB: two 2020-06 samples, block 17's five monthly sources, and its output);
+delete when done prototyping.

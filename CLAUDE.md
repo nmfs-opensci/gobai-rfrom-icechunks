@@ -16,9 +16,13 @@ Two product areas:
 - **`RFROMV/`** — RFROM v2.3 gridded Argo temperature/salinity. Pipeline
   notebooks prepare netCDFs for the NOAA Open Data Dissemination (NODD) GCP
   bucket `noaa-oar-rfrom`.
-- **`GOBAI-O2/`** — GOBAI-O2 v2.3 gridded oxygen. `gobai-o2-monthly-icechunk-sc.ipynb`
-  builds a materialized Zarr v3 Icechunk store published to Source Cooperative
-  (`data.source.coop/fish-pace/gobai-o2/monthly`).
+- **`GOBAI-O2/`** — two unrelated GOBAI products, do not conflate them:
+  - **GOBAI HR-v1.0 weekly** oxygen + nitrate from PMEL ERDDAP, bound for the NODD
+    GCP bucket `noaa-oar-gobai` (issue #13). Shares `nodd.py` with RFROMV; see
+    `GOBAI-O2/README.md` and `claude/notes/gobai-nodd.md`.
+  - **GOBAI-O2 v2.3 monthly** from NCEI. `gobai-o2-monthly-icechunk-sc.ipynb`
+    builds a materialized Zarr v3 Icechunk store published to Source Cooperative
+    (`data.source.coop/fish-pace/gobai-o2/monthly`).
 
 ## Common operations
 
@@ -77,18 +81,22 @@ modifier form: `ocean_salinity_error` → `sea_water_absolute_salinity
 standard_error`, `ocean_temperature_error` → `sea_water_conservative_temperature
 standard_error`.
 
-`RFROMV/rfrom_nodd.py` is the batch script form of the notebook (issue #5). Its
-`STREAMS` dict is the single place stream differences live. It requires an
-explicit `--stream` plus an explicit `--blocks RANGE` or `--all` — nothing is
-processed implicitly. Run one stream at a time (one VM per stream, or split a
+`nodd.py` (repo root) is the batch script form of the notebook (issue #5); it
+covers **both** products, since GOBAI HR shares RFROM's grid (issue #13).
+`RFROMV/rfrom_nodd.py` is a back-compat shim that forwards to it with every flag
+unchanged. Its `STREAMS` dict is the single place stream differences live, and
+`PRODUCTS` holds the per-product bucket / default version / scratch default. It
+requires an explicit `--stream` plus an explicit `--blocks RANGE` or `--all` —
+nothing is processed implicitly. Run one stream at a time (one VM per stream, or split a
 stream across VMs with disjoint `--blocks` ranges); it is idempotent (skips blocks
 already in the bucket unless `--force`). `--list` prints the block→monthly-file
 plan without downloading. See `claude/notes/nodd-batch-script.md` for the resolved
 design decisions.
 
-The script also runs off-hub (bare VM, laptop): `RFROM_SCRATCH_DIR` and
-`RFROM_GCS_TOKEN` override the two hardcoded hub paths, with the hub values as
-defaults. `RFROMV/{requirements.txt,pixi.toml,environment.yml}` carry the same
+The script also runs off-hub (bare VM, laptop): `NODD_SCRATCH_DIR` and
+`NODD_GCS_TOKEN` override the two hub paths, with the hub values as defaults (the
+older `RFROM_`-prefixed names are still honoured; the scratch default is
+per-product, `rfromv-scratch` vs `gobai-scratch`). `RFROMV/{requirements.txt,pixi.toml,environment.yml}` carry the same
 dependency set for venv+pip / pixi / conda, and `RFROMV/README.md` has the full
 "Running off-hub" setup.
 
@@ -120,6 +128,49 @@ chunk grid is uniform across files for concatenation. Notes for the reader side
 live in the notebook's Step 5 markdown (single-chunk `time`, `loadable_variables`,
 `zarr.config async.concurrency`, and passing an explicit `chunks=` rather than
 `chunks={}` when opening).
+
+## GOBAI HR → NODD pipeline
+
+Issue #13. Same machinery as RFROMV, run through the same `nodd.py`, because the
+grid is **identical**: GOBAI HR is built on RFROM, and `latitude` (720),
+`longitude` (1440), `mean_pressure` (58) and `mean_pressure_bnds`
+`(mean_pressure, vertices)` match RFROM v2.3 value-for-value on the same weekly
+time grid. RFROM's 1670-step stable axis is an exact prefix of GOBAI's 1719, so a
+combined downstream Icechunk store is geometrically clean — with the caveat that
+GOBAI declares `source = "... RFROM v2.2"` while the RFROM NODD product is v2.3.
+
+Two streams, no stable/realtime/error split:
+
+| stream | ERDDAP dataset_id | data variable | destination |
+|---|---|---|---|
+| `o2`  | `gobai_o2_hr_v10`  | `o2`  | `gs://noaa-oar-gobai/netcdf/v202606/o2/` |
+| `no3` | `gobai_no3_hr_v10` | `no3` | `gs://noaa-oar-gobai/netcdf/v202606/no3/` |
+
+1993-01-01 → 2025-12-05 weekly, 1719 steps → **18 blocks** (17 × 100 + 19), 396
+monthly source files and ~0.41 TB per stream. Output files are named e.g.
+`GOBAI-O2-HR-v202606_1993-01-01_1994-11-25.nc`.
+
+The version prefix is **`v202606`**, the string stamped in the source filenames
+and in each file's `title` attribute; ERDDAP's dataset title says `HR-v1.0`
+instead and the files win.
+
+CF pass (metadata only, values unchanged; verified against CF standard name table
+v94). Neither file carries a `standard_name` for its data variable, and units are
+the non-udunits string `"micromole per kilogram"`:
+
+- `o2` → `moles_of_oxygen_per_unit_mass_in_sea_water`, `umol kg-1`
+- `no3` → `moles_of_nitrate_per_unit_mass_in_sea_water`, `umol kg-1`
+- `mean_pressure` → `sea_water_pressure`, `positive="down"`, `axis="Z"`
+- the source's non-standard `Description` attribute is copied into `long_name`
+  where none exists (GOBAI streams only — RFROM blocks are already published
+  without it, so turning it on there would make that tree inconsistent).
+
+Both CF names are the **per-mass** forms. ERDDAP's own config for
+`gobai_no3_hr_v10` advertises `mole_concentration_of_nitrate_in_sea_water`, a
+per-**volume** name (`mol m-3`) inconsistent with the per-mass units and absent
+from the files — the same class of upstream error as the RFROM salinity mislabel,
+pending author confirmation. `comment = "preliminary"` and the "in prep."
+`references` are passed through verbatim.
 
 ## Chunking reference numbers
 

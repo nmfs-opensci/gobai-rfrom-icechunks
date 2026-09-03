@@ -1,0 +1,199 @@
+# GOBAI — GOBAI HR → NODD pipeline
+
+Prepares the **GOBAI HR** gridded oxygen and nitrate fields for the NOAA Open
+Data Dissemination (NODD) GCP bucket `gs://noaa-oar-gobai`. Source files come
+from PMEL ERDDAP; outputs are CF-compliant, rechunked, compressed netCDFs laid
+out per stream under `netcdf/<version>/<stream>/`, ready to be virtualized into a
+downstream Icechunk / VirtualiZarr store.
+
+Despite the directory name, this covers **both** GOBAI streams — oxygen (`o2`)
+and nitrate (`no3`).
+
+Per output file the pipeline is:
+
+```
+ERDDAP monthly netCDFs
+  → open_mfdataset combine
+  → select one 100-time-step block
+  → fix CF metadata
+  → rechunk (100, 1, 180, 180) + zlib-4/shuffle
+  → upload to gs://noaa-oar-gobai/netcdf/<version>/<stream>/
+```
+
+The 1719-step record splits into **18 blocks** (17 × 100 plus a final 19); output
+files are named e.g. `GOBAI-O2-HR-v202606_1993-01-01_1994-11-25.nc`.
+
+> **Not the same product as `gobai-o2-monthly-icechunk-sc.ipynb` in this
+> directory.** That notebook builds GOBAI-O2 **v2.3 monthly** from NCEI and
+> publishes it to Source Cooperative. This pipeline handles GOBAI **HR-v1.0,
+> weekly** from PMEL ERDDAP, bound for NODD. Different version, different
+> cadence, different source, different destination — do not mix their chunking
+> or metadata decisions.
+
+## The two product streams
+
+| stream | ERDDAP dataset | data variable | units (source) | NODD prefix |
+|---|---|---|---|---|
+| `o2`  | [`gobai_o2_hr_v10`](https://data.pmel.noaa.gov/pmel/erddap/griddap/gobai_o2_hr_v10.html)   | `o2`  | micromole per kilogram | `netcdf/v202606/o2/` |
+| `no3` | [`gobai_no3_hr_v10`](https://data.pmel.noaa.gov/pmel/erddap/griddap/gobai_no3_hr_v10.html) | `no3` | micromole per kilogram | `netcdf/v202606/no3/` |
+
+Both run 1993-01-01 → 2025-12-05, weekly, 1719 steps, 396 monthly source files,
+~0.41 TB per stream. There is **no stable/realtime/error split** — one stream per
+variable, unlike RFROM's six.
+
+### Version string
+
+The prefix uses **`v202606`**, the version stamped inside the files themselves:
+it appears both in every source filename (`GOBAI-O2-HR-v202606-1993-01.nc`) and
+in each file's `title` global attribute (`"GOBAI-O2-HR-v202606"`). ERDDAP's
+*dataset title* says `HR-v1.0` instead; the two disagree and the files win.
+`--version` overrides the prefix if that is ever revisited.
+
+### CF metadata overrides
+
+The source files declare `Conventions = "CF-1.8"` but neither carries a
+`standard_name` for its data variable, and both use the non-udunits units string
+`"micromole per kilogram"`. The pipeline sets these (verified against **CF
+standard name table v94**; **metadata only, values unchanged**):
+
+| variable | source | published |
+|---|---|---|
+| `o2` | no `standard_name`, `micromole per kilogram` | `moles_of_oxygen_per_unit_mass_in_sea_water`, `umol kg-1` |
+| `no3` | no `standard_name`, `micromole per kilogram` | `moles_of_nitrate_per_unit_mass_in_sea_water`, `umol kg-1` |
+| `mean_pressure` | no `standard_name` | `sea_water_pressure`, `positive = "down"`, `axis = "Z"` |
+| `time` / `latitude` / `longitude` | `standard_name` present | `axis` T / Y / X added |
+
+Both CF names are the **per-mass** forms (canonical units `mol kg-1`), matching
+the data. ⚠️ ERDDAP's own dataset config for `gobai_no3_hr_v10` advertises
+`mole_concentration_of_nitrate_in_sea_water`, which is a **per-volume** quantity
+(canonical `mol m-3`) and therefore inconsistent with the per-mass units; that
+name is not in the netCDF files and is not used here. This is the same class of
+upstream error as the RFROM salinity mislabel — **pending confirmation from the
+data author**, and cheap to change since it is metadata only.
+
+The source annotates variables with a non-standard `Description` attribute and no
+`long_name`. The pipeline copies `Description` into `long_name` where none exists
+(keeping `Description` as provenance) rather than inventing its own wording.
+
+`comment = "preliminary"` and `references = "Sharp, et al. GOBAI High Resolution
+Data Products, in prep."` are passed through **verbatim** — the published files
+stay honest about the product's pre-publication status.
+
+## Files in this directory
+
+### Deliverables
+
+- **`../nodd.py`** — the batch script, shared with RFROMV. Handles all eight
+  streams (RFROM's six plus GOBAI's two); `--stream o2` / `--stream no3` select
+  these. See "Running the batch script" below.
+- **`README.md`** — this file.
+
+### Unrelated to this pipeline
+
+- **`gobai-o2-monthly-icechunk-sc.ipynb`** — the GOBAI-O2 v2.3 monthly → Source
+  Cooperative Icechunk build. A different product; see the note above.
+- **`index.html`** — landing page for that published product.
+
+## Why one script for two products
+
+GOBAI HR is built on RFROM, and the coordinates are **identical**: opening a
+GOBAI file next to `RFROMV23_TEMP_STABLE_1993_01.nc` shows `latitude` (720),
+`longitude` (1440), `mean_pressure` (58) and `mean_pressure_bnds`
+`(mean_pressure, vertices)` matching value-for-value, same float32 dtype, on the
+same weekly time grid — RFROM's 1670-step stable axis is an exact prefix of
+GOBAI's 1719. The array shapes, the contiguous on-disk layout, and therefore the
+chunking, compression and I/O strategy are all the same, so the two products
+share `nodd.py` rather than forking it.
+
+One caveat if these are ever combined into a single Icechunk store: GOBAI HR
+declares `source = "Argo float data, GLODAP ship data, RFROM v2.2"` — it is built
+on RFROM **v2.2**, while the RFROM NODD product is **v2.3**. The grids match; the
+underlying field versions do not.
+
+## Environment
+
+Identical to RFROMV's — same dependencies, same credentials mechanism, same
+scratch layout. The full walkthrough (venv / pixi / conda, gcloud auth, tmux for
+long runs) is in
+[`../RFROMV/README.md` § "Running off-hub"](../RFROMV/README.md#running-off-hub-bare-vm-or-macos);
+everything there applies unchanged except the bucket you need write access to,
+which is `gs://noaa-oar-gobai`. The dependency manifests
+(`requirements.txt`, `environment.yml`, `pixi.toml`) live in `../RFROMV/` and
+cover both products.
+
+Two environment variables override the JupyterHub defaults so the script runs on
+a bare VM or a laptop:
+
+| variable | default | meaning |
+|---|---|---|
+| `NODD_SCRATCH_DIR` | `/home/jovyan/shared-public/gobai-scratch` (GOBAI streams) | download + output scratch; needs ~35 GB free |
+| `NODD_GCS_TOKEN` | `~/.config/gcloud/application_default_credentials.json` (hub path) | credentials JSON path, **or** the keyword `google_default` to resolve ADC the usual way |
+
+The older `RFROM_SCRATCH_DIR` / `RFROM_GCS_TOKEN` names are still honoured. Note
+the scratch **default** is product-specific (`gobai-scratch` vs
+`rfromv-scratch`), so GOBAI and RFROM runs on the same hub do not collide; an
+explicit `NODD_SCRATCH_DIR` overrides both.
+
+## Running the batch script
+
+`nodd.py` requires an explicit `--stream` **and** an explicit `--blocks RANGE` or
+`--all` — nothing is processed implicitly. Run one stream at a time (one VM per
+stream, or split a stream across VMs with disjoint `--blocks` ranges). It is
+idempotent: before writing a block it checks whether the target object already
+exists in the bucket and skips it unless `--force`, so a resume-after-interrupt
+or a second VM on the same stream is safe. Downloads resume the same way — a
+monthly file is streamed to a `.part` file, checked that it opens as netCDF, and
+only then renamed into place, with 4 retries on flaky ERDDAP reads.
+
+```sh
+# Plan only: print the block → monthly-file cross-walk, download nothing.
+python nodd.py --stream o2 --list
+
+# Smoke-test one block end to end. Block 17 is the cheapest (19 steps, 5 files).
+python nodd.py --stream o2 --blocks 17 --no-upload --keep-scratch
+
+# Process a single block and upload it.
+python nodd.py --stream o2 --blocks 0
+
+# Process EVERY block in the stream and upload them (a typical production run,
+# one stream per VM). Idempotent: already-uploaded blocks are skipped.
+python nodd.py --stream o2 --all
+python nodd.py --stream no3 --all
+
+# Split a stream across two VMs (disjoint block ranges).
+python nodd.py --stream no3 --blocks 0-8      # VM A
+python nodd.py --stream no3 --blocks 9-17     # VM B
+```
+
+The run prints the resolved scratch directory and destination prefix at startup —
+check those two lines before walking away. Flags are documented in
+[`../RFROMV/README.md` § Flags](../RFROMV/README.md#flags); they are the same set,
+with `--version` defaulting to `v202606` for these streams.
+
+### Resource expectations (per stream)
+
+The arrays are exactly the same size as RFROM's, so these track the measured
+RFROM `temp_stable` run:
+
+| | |
+|---|---|
+| monthly source files per block | 23 (~1 GB each, ~23 GB); block 17 has 5 |
+| output file per block | ~7–8 GB |
+| peak scratch disk | ~31 GB (one block, default cleanup) |
+| blocks per stream | 18 |
+| total downloaded per stream | ~410 GB |
+| total uploaded per stream | ~130 GB |
+| RAM | 8 GB minimum, 16 GB comfortable |
+
+Wall-clock is dominated by download and upload, so it tracks network throughput
+far more than CPU — a bigger instance does not speed it up.
+
+## Notes
+
+Reconnaissance, the measured comparison against RFROM, and the resolved design
+decisions are written up in
+[`../claude/notes/gobai-nodd.md`](../claude/notes/gobai-nodd.md). The rationale
+for each pipeline stage — why `data_vars="minimal"`, why
+`chunks={"mean_pressure": 1}` — is in
+[`../claude/notes/nodd-prep.md`](../claude/notes/nodd-prep.md) and
+[`../claude/notes/nodd-batch-script.md`](../claude/notes/nodd-batch-script.md).
