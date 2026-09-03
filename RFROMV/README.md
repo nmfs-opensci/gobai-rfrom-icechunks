@@ -66,13 +66,14 @@ overrides `sal_stable` / `sal_realtime` to `sea_water_absolute_salinity` /
 
 ### Sandbox (exploratory scratch — not part of the pipeline)
 
-- **`prep-for-NODD-rfromv23.ipynb`** — earlier exploratory notebook.
-- **`upload_to_nodd.ipynb`** — a short scratch uploader.
 - **`setup_bare_VM.txt`** — Eli's personal cheat-sheet of shell commands for
   standing up a bare VM. Informal by design and overlapping
-  [`../setup.md`](../setup.md), which is the maintained version.
+  [`../setup.md`](../setup.md), which is the maintained version; don't treat it
+  as the source of truth.
 
-Both are kept for reference only; don't treat them as the source of truth.
+(The earlier exploratory notebooks, `prep-for-NODD-rfromv23.ipynb` and
+`upload_to_nodd.ipynb`, are gone — issue #15. Anything worth keeping from them
+was merged into `prep-one-netcdf-for-NODD.ipynb`.)
 
 ## Environment
 
