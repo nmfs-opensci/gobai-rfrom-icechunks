@@ -1,0 +1,10 @@
+# Dependencies for RFROMV/rfrom_nodd.py (see README.md, "Running off-hub").
+# Lower bounds only -- these are the versions the pipeline was validated on
+# (JupyterHub, Python 3.12); newer is expected to be fine.
+xarray>=2025.12.0
+dask[array]>=2025.11.0
+h5netcdf>=1.7.3
+gcsfs>=2025.12.0
+pandas>=2.3.3
+numpy>=2.3.5
+requests>=2.32
