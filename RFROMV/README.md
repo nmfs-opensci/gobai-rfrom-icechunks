@@ -86,16 +86,11 @@ rather than re-downloaded (~200 GB of ERDDAP traffic saved). Only the seam and t
 tails are new work: about 16 GB downloaded, 19 GB written.
 
 ```sh
-# 1. Copy blocks 0-15 of each stable stream to the new prefix. No renaming: a
-#    pure-stable block is named exactly as it is today, so these 32 objects keep
-#    their names. `head -n -1` drops the short final block
-#    (2023-09-01_2024-12-27), which the new block 16 supersedes.
-for L in temp sal; do
-  gcloud storage ls "gs://noaa-oar-rfrom/netcdf/v2.3/${L}_stable/*.nc" | sort | head -n -1 |
-  while read -r f; do
-    gcloud storage cp "$f" "gs://noaa-oar-rfrom/netcdf/v2.3/$L/"
-  done
-done
+# 1. Copy blocks 0-15 of temp and sal to the new prefixes. Server-side rewrite:
+#    no bytes cross the network, and each object is CRC-verified as it lands.
+#    Idempotent -- an object already present with a matching CRC is skipped.
+#    (--plan first if you want to see what it will do.)
+python RFROMV/migrate_v23.py --copy
 
 # 2. Build the two new blocks per variable: block 16 spans the stable/realtime
 #    seam, block 17 is the padded 19-step tail.
@@ -106,11 +101,18 @@ python nodd.py --stream sal  --blocks 16,17
 python nodd.py --stream temp_error --blocks 17 --force
 python nodd.py --stream sal_error  --blocks 17 --force
 
-# 4. Verify before deleting anything: 18 files per stream, and every object
-#    carried over from the old tree byte-identical to its source (CRC32C,
+# 4. Verify before deleting anything: every block the plan expects is present,
+#    and every object carried over is byte-identical to its source (CRC32C,
 #    metadata only -- nothing is downloaded). Exits non-zero if not.
-python RFROMV/check_migration.py
+python RFROMV/migrate_v23.py --check
 ```
+
+Step 1 uses `gcsfs`, not `gcloud storage`: gcsfs authenticates with the
+application-default credentials this repo already uses, while the gcloud CLI
+wants its own `gcloud auth login` — on the hub `gcloud auth list` reports no
+credentialed accounts. gcsfs issues a GCS rewrite and loops on the rewrite token
+until the server says done, so multi-GB objects copy correctly without being
+downloaded. Measured: **32 objects, 219 GB, ~15 seconds.**
 
 ### File names
 
@@ -159,7 +161,7 @@ the two realtime files — because the rebuilt blocks 16 and 17 contain exactly
 those weeks, re-blocked.
 
 ```sh
-python RFROMV/check_migration.py       # must exit 0
+python RFROMV/migrate_v23.py --check   # must exit 0
 python build_icechunk.py --store rfrom_v23 --local-repo /tmp/rehearsal   # must validate
 
 for d in temp_stable temp_realtime sal_stable sal_realtime; do
@@ -223,10 +225,12 @@ chunk). Zarr has no variable-length chunks, so a store cannot paper over either.
 - **`icechunk-smoke-test.ipynb`** — run this before building the real store, and
   after any change to `build_icechunk.py`. Builds a small store into a local
   temporary repository and validates it against the source netCDFs.
-- **`check_migration.py`** — one-off verifier for the issue #17 restructure:
-  confirms the new four-stream tree is complete and that every copied object
-  matches its source by CRC32C, before the old prefixes are deleted. Can be
-  deleted once the migration is done.
+- **`migrate_v23.py`** — one-off tool for the issue #17 restructure. `--plan`
+  shows which blocks are copied and which must be built; `--copy` does the
+  server-side copy; `--check` confirms the new tree is complete and every copied
+  object matches its source by CRC32C, before the old prefixes are deleted. Takes
+  its block plan straight from `nodd.py`, so the two cannot drift. Can be deleted
+  once the migration is done.
 - **`index.html`** — landing page for the published product.
 - **`../requirements.txt`** — pip dependencies for running `nodd.py` off-hub.
   Only needed off-hub; see "Running off-hub" below.
