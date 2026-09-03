@@ -195,6 +195,14 @@ ERDDAP_GRIDDAP = "https://data.pmel.noaa.gov/pmel/erddap/griddap"
 #     is sea_water_absolute_salinity (units-consistent).                        #
 # --------------------------------------------------------------------------- #
 
+# The v2.3 citation, as published in every correct v2.3 stream. Byte-for-byte
+# from the files: en-dash (U+2013) before "Machine Learning", trailing space.
+REFERENCE_V23 = (
+    "Lyman, J.M. and G.C. Johnson. 2026. High Resolution Random Forest Regression "
+    "Ocean Maps (RFROM) of Temperature and Salinity, Submitted Journal of "
+    "Geophysical Research \u2013 Machine Learning and Computation "
+)
+
 STREAMS = {
     "temp_stable": {
         "product": "rfrom",
@@ -226,6 +234,21 @@ STREAMS = {
             "standard_name": "sea_water_conservative_temperature standard_error",
             "units": "degree_Celsius",
         },
+        # The source files' own globals say "RFROM v2.2" with a stub reference,
+        # while every other v2.3 stream says v2.3 with the full citation. It is a
+        # stale label on v2.3 data, not v2.2 data (GitHub issue #25): title and
+        # references are the ONLY attributes that differ from the other streams,
+        # ERDDAP's dataset title for argo_rfromv23_temp_error is correct, and
+        # there is no v2.2 temperature-error product on this grid to point at --
+        # argo_rfromv22_error is dimensioned on depth, i.e. the OHC anomaly
+        # product (issue #21). Metadata only; no value is touched. The strings
+        # below are copied byte-for-byte from the published sal_error and
+        # temp_stable files, en-dash and trailing space included.
+        "global_attrs": {
+            "title": "RFROM v2.3",
+            "references": REFERENCE_V23,
+        },
+        "global_attrs_note": "GitHub issue #25",
         "monthly_template": "RFROMV23_TEMP_ERROR_{year}_{month:02d}.nc",
         "out_template": "RFROMV23_TEMP_ERROR_{start}_{end}.nc",
     },
@@ -291,12 +314,12 @@ STREAMS = {
             "units": "degree_Celsius",
         },
         "sources": [
-            {"dataset_id": "argo_rfromv23_temp",
+            {"dataset_id": "argo_rfromv23_temp", "label": "STABLE",
              "monthly_template": "RFROMV23_TEMP_STABLE_{year}_{month:02d}.nc"},
-            {"dataset_id": "argo_rfromv23_temp_realtime",
+            {"dataset_id": "argo_rfromv23_temp_realtime", "label": "REALTIME",
              "monthly_template": "RFROMV23_TEMP_STABLE_{year}_{month:02d}_REALTIME.nc"},
         ],
-        "out_template": "RFROMV23_TEMP_{start}_{end}.nc",
+        "out_template": "RFROMV23_TEMP_{mode}_{start}_{end}.nc",
     },
     "sal": {
         "product": "rfrom",
@@ -306,12 +329,12 @@ STREAMS = {
             "units": "grams_per_kilogram",
         },
         "sources": [
-            {"dataset_id": "argo_rfromv23_sal",
+            {"dataset_id": "argo_rfromv23_sal", "label": "STABLE",
              "monthly_template": "RFROMV23_SAL_STABLE_{year}_{month:02d}.nc"},
-            {"dataset_id": "argo_rfromv23_sal_realtime",
+            {"dataset_id": "argo_rfromv23_sal_realtime", "label": "REALTIME",
              "monthly_template": "RFROMV23_SAL_STABLE_{year}_{month:02d}_REALTIME.nc"},
         ],
-        "out_template": "RFROMV23_SAL_{start}_{end}.nc",
+        "out_template": "RFROMV23_SAL_{mode}_{start}_{end}.nc",
     },
 
     # --- RFROM v2.2 / v2.1 (three streams) ------------------------------------ #
@@ -544,9 +567,18 @@ def make_file_blocks(stream, times, origin=None, block_size=BLOCK_SIZE):
                 f"{ERDDAP_FILES}/{src['dataset_id']}/"
                 + src["monthly_template"].format(year=t.year, month=t.month)
             )
+        # {mode} names what is actually inside the file: STABLE, REALTIME, or
+        # STABLE_REALTIME for the block that spans the seam. Labels appear in the
+        # order the block meets them. Templates without {mode} ignore it.
+        labels, seen_labels = [], set()
+        for o in block_origin:
+            label = sources[int(o)].get("label")
+            if label and label not in seen_labels:
+                seen_labels.add(label)
+                labels.append(label)
         start, end = block_times[0], block_times[-1]
         filename = cfg["out_template"].format(
-            start=f"{start:%Y-%m-%d}", end=f"{end:%Y-%m-%d}"
+            start=f"{start:%Y-%m-%d}", end=f"{end:%Y-%m-%d}", mode="_".join(labels)
         )
         blocks.append({
             "block": i // block_size,
@@ -693,6 +725,11 @@ def build_dataset(stream, local_files, block, version):
 
     ds.attrs["Conventions"] = "CF-1.10, ACDD-1.3"
 
+    # Global attributes the source files get wrong, corrected here. Metadata only:
+    # no data value is touched. The stream's entry carries the evidence.
+    overrides = cfg.get("global_attrs", {})
+    ds.attrs.update(overrides)
+
     var_dims = ds[data_var].dims
     # On-disk chunk sizes. The TIME chunk is always the full CHUNKS["time"], even
     # when the block is shorter -- a short final block with a shrunken time chunk
@@ -714,7 +751,11 @@ def build_dataset(stream, local_files, block, version):
     note = (
         f"{stamp}: repackaged for NODD ({version}) from ERDDAP {sources} "
         f"monthly files; rechunked to {chunksizes} ({', '.join(var_dims)})"
-        + (" with time unlimited (padded edge chunk)." if short_block else ".")
+        + (" with time unlimited (padded edge chunk)" if short_block else "")
+        + (f"; corrected {', '.join(sorted(overrides))} "
+           f"({cfg.get('global_attrs_note', 'see repository issues')})"
+           if overrides else "")
+        + "."
     )
     ds.attrs["history"] = note + "\n" + ds.attrs.get("history", "")
 

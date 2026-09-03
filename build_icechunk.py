@@ -32,6 +32,7 @@ Reads the same NODD_GCS_TOKEN / NODD_SCRATCH_DIR environment as nodd.py.
 
 import argparse
 import os
+import re
 import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -133,17 +134,32 @@ if os.sep in GCS_TOKEN or GCS_TOKEN.startswith("~"):
 # Source discovery                                                             #
 # --------------------------------------------------------------------------- #
 
-def list_stream_files(cfg, stream, fs=None):
-    """The stream's netCDFs as gs:// URLs, in time order.
+# Block file names end in _<start>_<end>.nc, e.g.
+# RFROMV23_TEMP_STABLE_REALTIME_2023-09-01_2025-07-25.nc.
+_BLOCK_DATES = re.compile(r"_(\d{4}-\d{2}-\d{2})_(\d{4}-\d{2}-\d{2})\.nc$")
 
-    The file names start with an ISO date, so lexical order is time order; it is
-    checked against the actual time axis later, in concat_virtual().
+
+def block_start(path):
+    """Sort key: the block's start date, taken from the file name.
+
+    Lexical order is NOT time order for these names -- the combined temp/sal
+    streams carry a STABLE / STABLE_REALTIME / REALTIME infix, and "REALTIME"
+    sorts before "STABLE", which would put the newest block first. Ordering the
+    store by name would then be wrong, so order by the dates the name carries.
+    (concat_virtual re-sorts on the files' real time values regardless; this
+    keeps listings and validation sampling honest.)
     """
+    match = _BLOCK_DATES.search(path)
+    return (0, match.group(1)) if match else (1, path)
+
+
+def list_stream_files(cfg, stream, fs=None):
+    """The stream's netCDFs as gs:// URLs, in time order."""
     import gcsfs
     fs = fs or gcsfs.GCSFileSystem(token=GCS_TOKEN)
     prefix = f"{cfg['bucket']}/{cfg['netcdf_prefix']}/{stream}"
     try:
-        paths = sorted(p for p in fs.ls(prefix) if p.endswith(".nc"))
+        paths = sorted((p for p in fs.ls(prefix) if p.endswith(".nc")), key=block_start)
     except FileNotFoundError:
         paths = []
     if not paths:

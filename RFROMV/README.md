@@ -86,14 +86,14 @@ rather than re-downloaded (~200 GB of ERDDAP traffic saved). Only the seam and t
 tails are new work: about 16 GB downloaded, 19 GB written.
 
 ```sh
-# 1. Copy blocks 0-15 of each stable stream to the new prefix, renaming as we go.
-#    `head -n -1` drops the short final block (2023-09-01_2024-12-27), which is
-#    superseded by the new block 16.
+# 1. Copy blocks 0-15 of each stable stream to the new prefix. No renaming: a
+#    pure-stable block is named exactly as it is today, so these 32 objects keep
+#    their names. `head -n -1` drops the short final block
+#    (2023-09-01_2024-12-27), which the new block 16 supersedes.
 for L in temp sal; do
   gcloud storage ls "gs://noaa-oar-rfrom/netcdf/v2.3/${L}_stable/*.nc" | sort | head -n -1 |
   while read -r f; do
-    gcloud storage cp "$f" \
-      "gs://noaa-oar-rfrom/netcdf/v2.3/$L/$(basename "$f" | sed 's/_STABLE_/_/')"
+    gcloud storage cp "$f" "gs://noaa-oar-rfrom/netcdf/v2.3/$L/"
   done
 done
 
@@ -110,9 +110,47 @@ python nodd.py --stream sal_error  --blocks 17 --force
 python build_icechunk.py --store rfrom_v23 --list
 ```
 
+### File names
+
+The four directories are `temp/`, `sal/`, `temp_error/` and `sal_error/`. Inside
+`temp/` and `sal/` the file name says what the file actually holds:
+
+| block | contents | name |
+|---|---|---|
+| 0–15 | all settled | `RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc` … |
+| 16 | 70 settled + 30 provisional | `RFROMV23_TEMP_STABLE_REALTIME_2023-09-01_2025-07-25.nc` |
+| 17 | all provisional | `RFROMV23_TEMP_REALTIME_2025-08-01_2025-12-05.nc` |
+
+The seam block carries **both** labels, in the order it meets them. Pure-stable
+blocks keep the name they already have, which is why step 1 above is a plain copy.
+The old `_REALTIME` *suffix* (on files whose name also said `STABLE`) is gone —
+the label is now an infix and means what it says.
+
+Two consequences worth knowing:
+
+- **Lexical order is no longer time order** — `REALTIME` sorts before `STABLE`.
+  `build_icechunk.py` sorts on the dates in the name (`block_start`), and the
+  store's own concatenation orders by the files' real time values, so neither is
+  fooled; a hand-written `ls | sort` would be.
+- **Names churn when provisional weeks are settled.** When PMEL promotes 2025
+  into the settled record, block 16 becomes all-stable and is rebuilt as
+  `..._STABLE_2023-09-01_2025-07-25.nc`; the `STABLE_REALTIME` object is then
+  stale and should be deleted. That is the cost of putting the mode in the name;
+  the machine-readable version of the same fact is `data_mode` in the Icechunk
+  store, which never churns.
+
 Deleting the old `temp_stable` / `temp_realtime` / `sal_stable` / `sal_realtime`
-prefixes is a separate, NODD-visible decision — the store does not need it, and
-anyone who has linked to those files would break. Left for a human to make.
+prefixes once the copy is verified:
+
+```sh
+for d in temp_stable temp_realtime sal_stable sal_realtime; do
+  gcloud storage rm --recursive "gs://noaa-oar-rfrom/netcdf/v2.3/$d"
+done
+```
+
+Destructive and NODD-visible — anyone who linked to those paths breaks. Run it
+only after `python build_icechunk.py --store rfrom_v23 --list` shows 18 files in
+each of the four streams.
 
 **Weekly realtime updates** rewrite only the tail block (`--blocks 17 --force`,
 ~1.5 GB) until it reaches 100 steps, at which point it becomes a full block and a
