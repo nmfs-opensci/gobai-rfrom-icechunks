@@ -1,0 +1,23 @@
+# pixi environment for rfrom_nodd.py (see README.md, "Running off-hub").
+#   pixi install && pixi run plan          # or: pixi shell
+[project]
+name = "rfromv-nodd"
+description = "RFROM v2.3 ERDDAP netCDFs -> NODD-bound files"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64", "osx-64"]
+
+[dependencies]
+python = ">=3.11,<3.14"
+xarray = ">=2025.12.0"
+dask-core = ">=2025.11.0"
+h5netcdf = ">=1.7.3"
+gcsfs = ">=2025.12.0"
+pandas = ">=2.3.3"
+numpy = ">=2.3.5"
+requests = ">=2.32"
+
+[tasks]
+# Plan only -- no credentials, no download:  pixi run plan --stream temp_stable
+plan = "python rfrom_nodd.py --list"
+# Full run, args passed through:  pixi run nodd --stream temp_stable --all
+nodd = "python rfrom_nodd.py"

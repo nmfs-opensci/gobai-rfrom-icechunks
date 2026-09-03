@@ -34,6 +34,14 @@ Examples
     # Whole stream, no upload (local test), keep the scratch files.
     python rfrom_nodd.py --stream temp_realtime --all --no-upload --keep-scratch
 
+Environment
+-----------
+The defaults assume the JupyterHub. Two paths are overridable so the script also
+runs on a bare VM or a laptop: ``RFROM_SCRATCH_DIR`` (download + output scratch,
+needs ~35 GB free) and ``RFROM_GCS_TOKEN`` (a credentials JSON path, or the
+keyword "google_default" to resolve ADC the usual way). See RFROMV/README.md,
+"Running off-hub", for the venv + credentials setup.
+
 The hard-won correctness / performance choices from the notebook are preserved
 verbatim; see claude/notes/nodd-prep.md for the why. In short: open with
 ``data_vars="minimal", coords="minimal", compat="override"`` so ``mean_pressure_bnds``
@@ -62,14 +70,27 @@ BLOCK_SIZE = 100  # time steps per output file (the 1670-step stable record -> 1
 # latitude, longitude): 100 * 1 * 180 * 180 * 4 bytes ~= 12.96 MB per chunk.
 CHUNKS = {"time": 100, "mean_pressure": 1, "latitude": 180, "longitude": 180}
 
-# Scratch / local paths (JupyterHub shared volume). erddap/ holds monthly source
-# downloads; nodd/ holds the assembled output files before upload.
-SCRATCH_DIR = "/home/jovyan/shared-public/rfromv-scratch"
+# Scratch / local paths. erddap/ holds monthly source downloads; nodd/ holds the
+# assembled output files before upload. The default is the JupyterHub shared
+# volume; off-hub (bare VM, laptop) set RFROM_SCRATCH_DIR to any writable path
+# with room for ~35 GB (one block's downloads plus its output).
+SCRATCH_DIR = os.path.expanduser(
+    os.environ.get("RFROM_SCRATCH_DIR", "/home/jovyan/shared-public/rfromv-scratch")
+)
 DOWNLOAD_DIR = os.path.join(SCRATCH_DIR, "erddap")
 OUTPUT_DIR = os.path.join(SCRATCH_DIR, "nodd")
 
 # NODD (GCP) destination: netcdf/<version>/<stream>/<file>.nc
-GCS_TOKEN = "/home/jovyan/.config/gcloud/application_default_credentials.json"
+# GCS_TOKEN is passed straight to gcsfs: either a path to a credentials JSON
+# (the default is where `gcloud auth application-default login` writes on the
+# hub) or a gcsfs token keyword -- "google_default" resolves ADC the normal way,
+# including GOOGLE_APPLICATION_CREDENTIALS. Override with RFROM_GCS_TOKEN.
+GCS_TOKEN = os.environ.get(
+    "RFROM_GCS_TOKEN",
+    "/home/jovyan/.config/gcloud/application_default_credentials.json",
+)
+if os.sep in GCS_TOKEN or GCS_TOKEN.startswith("~"):
+    GCS_TOKEN = os.path.expanduser(GCS_TOKEN)
 NODD_BUCKET = "noaa-oar-rfrom"
 NODD_NETCDF_DIR = "netcdf"
 DEFAULT_VERSION = "v2.3"
@@ -491,10 +512,21 @@ def main(argv=None):
 
     os.makedirs(DOWNLOAD_DIR, exist_ok=True)
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    print(f"Scratch: {SCRATCH_DIR}")
 
     do_upload = not args.no_upload
     nodd_dest = f"gs://{NODD_BUCKET}/{NODD_NETCDF_DIR}/{args.version}/{stream}"
+    # Fail before downloading ~23 GB if the credentials are not where we expect.
+    if do_upload and os.sep in GCS_TOKEN and not os.path.exists(GCS_TOKEN):
+        p.error(
+            f"credentials file not found: {GCS_TOKEN}\n"
+            "Run `gcloud auth application-default login`, or point RFROM_GCS_TOKEN at a "
+            "credentials JSON (or set it to 'google_default' to use ADC / "
+            "GOOGLE_APPLICATION_CREDENTIALS)."
+        )
     fs = gcsfs.GCSFileSystem(token=GCS_TOKEN) if do_upload else None
+    if do_upload:
+        print(f"Destination: {nodd_dest}")
 
     tally = {"uploaded": 0, "written": 0, "skipped": 0}
     for i in selected:
