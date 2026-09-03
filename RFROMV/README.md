@@ -49,13 +49,18 @@ overrides `sal_stable` / `sal_realtime` to `sea_water_absolute_salinity` /
 
 ### Deliverables
 
-- **`rfrom_nodd.py`** — the batch script (GitHub issue #5). Processes any of the
-  six streams into NODD netCDFs and uploads them. This is what you run in
-  production. See "Running the batch script" below.
+- **`../nodd.py`** — the batch script (GitHub issue #5). Processes any of the six
+  streams into NODD netCDFs and uploads them. This is what you run in production.
+  It lives at the repository root because GOBAI HR shares RFROM's grid and
+  therefore this pipeline (issue #13); see [`../GOBAI-O2/README.md`](../GOBAI-O2/README.md).
+  See "Running the batch script" below.
+- **`rfrom_nodd.py`** — a back-compat shim that forwards to `../nodd.py` with every
+  flag unchanged, so existing commands and `pixi run` tasks keep working. Prefer
+  `nodd.py` in new work.
 - **`prep-one-netcdf-for-NODD.ipynb`** — the tested single-file reference pipeline
   (GitHub issue #1, merged via PR #4). Run interactively cell-by-cell; it prepares
   and uploads **one** block so the workflow can be validated before scaling up.
-  `rfrom_nodd.py` is this notebook generalized to all six streams — the notebook
+  `nodd.py` is this notebook generalized to all six streams — the notebook
   remains the readable, step-annotated explanation of *why* each stage is the way
   it is.
 - **`index.html`** — landing page for the published product.
@@ -82,13 +87,18 @@ the `%pip install -qU ...` cell at the top of each notebook. NODD upload uses
 `~/.config/gcloud/application_default_credentials.json`, and scratch space
 (downloads + local output) defaults to `/home/jovyan/shared-public/rfromv-scratch`.
 
-`rfrom_nodd.py` also runs anywhere else — a bare VM, a laptop — via two
-environment variables that override those two hub paths:
+`nodd.py` also runs anywhere else — a bare VM, a laptop — via two environment
+variables that override those two hub paths:
 
 | variable | default | meaning |
 |---|---|---|
-| `RFROM_SCRATCH_DIR` | `/home/jovyan/shared-public/rfromv-scratch` | download + output scratch; needs ~35 GB free |
-| `RFROM_GCS_TOKEN` | `~/.config/gcloud/application_default_credentials.json` (hub path) | credentials JSON path, **or** the keyword `google_default` to resolve ADC the usual way |
+| `NODD_SCRATCH_DIR` | `/home/jovyan/shared-public/rfromv-scratch` (RFROM streams) | download + output scratch; needs ~35 GB free |
+| `NODD_GCS_TOKEN` | `~/.config/gcloud/application_default_credentials.json` (hub path) | credentials JSON path, **or** the keyword `google_default` to resolve ADC the usual way |
+
+The pre-issue-#13 names `RFROM_SCRATCH_DIR` / `RFROM_GCS_TOKEN` are still
+honoured. The scratch **default** is product-specific — RFROM streams default to
+`rfromv-scratch`, GOBAI streams to `gobai-scratch` — so the two do not collide on
+a shared machine; an explicit `NODD_SCRATCH_DIR` overrides both.
 
 See below for the full off-hub setup.
 
@@ -117,7 +127,7 @@ that carries HDF5.
 (`h5netcdf[h5py]`), not a hard dependency, so installing `h5netcdf` alone gives
 you an engine with no HDF5 backend — which fails only on the first file open,
 after a block has already been downloaded (issue #8). Install from one of the
-manifests below rather than by hand and this is taken care of; `rfrom_nodd.py`
+manifests below rather than by hand and this is taken care of; `nodd.py`
 also checks for it up front and exits before downloading anything.
 
 Three manifests are checked in, one per tool — `requirements.txt` (venv + pip),
@@ -199,15 +209,15 @@ still needs the environment variables from steps 2–3 exported in that shell.
 
 ### 2. Scratch space
 
-Point `RFROM_SCRATCH_DIR` at any writable path with room to spare. The script
+Point `NODD_SCRATCH_DIR` at any writable path with room to spare. The script
 creates the directory tree itself (`erddap/` for monthly downloads, `nodd/` for
 assembled output), so there is no `mkdir` to do by hand — but the filesystem must
 actually have the space, and on a cloud VM that usually means an attached data
 disk rather than the small boot disk.
 
 ```sh
-export RFROM_SCRATCH_DIR="$HOME/rfromv-scratch"      # VM: e.g. /mnt/data/rfromv-scratch
-df -h "$(dirname "$RFROM_SCRATCH_DIR")"              # confirm ~35 GB free
+export NODD_SCRATCH_DIR="$HOME/rfromv-scratch"       # VM: e.g. /mnt/data/rfromv-scratch
+df -h "$(dirname "$NODD_SCRATCH_DIR")"               # confirm ~35 GB free
 ```
 
 By default the script deletes each block's downloads and its uploaded output
@@ -241,7 +251,7 @@ Then authenticate:
 gcloud auth application-default login          # opens a browser
 #gcloud auth application-default set-quota-project <your-gcp-project> # not really needed
 
-export RFROM_GCS_TOKEN="$HOME/.config/gcloud/application_default_credentials.json"
+export NODD_GCS_TOKEN="$HOME/.config/gcloud/application_default_credentials.json"
 ```
 
 On a headless VM with no browser, use `gcloud auth application-default login
@@ -252,13 +262,13 @@ browser, and you paste the result back.
 the key onto the VM and point at it:
 
 ```sh
-export RFROM_GCS_TOKEN=/path/to/service-account-key.json
+export NODD_GCS_TOKEN=/path/to/service-account-key.json
 ```
 
 **c. A GCE VM with an attached service account** — no key file needed:
 
 ```sh
-export RFROM_GCS_TOKEN=google_default
+export NODD_GCS_TOKEN=google_default
 ```
 
 Verify write access *before* starting a long run, since a permissions failure
@@ -267,26 +277,26 @@ would otherwise surface only after the first ~23 GB download:
 ```sh
 python -c "
 import gcsfs, os
-fs = gcsfs.GCSFileSystem(token=os.environ['RFROM_GCS_TOKEN'])
+fs = gcsfs.GCSFileSystem(token=os.environ['NODD_GCS_TOKEN'])
 print(fs.ls('noaa-oar-rfrom/netcdf/v2.3/temp_stable')[:3])   # read
 fs.pipe('noaa-oar-rfrom/netcdf/v2.3/_write_check.txt', b'ok'); print('write OK')
 fs.rm('noaa-oar-rfrom/netcdf/v2.3/_write_check.txt')
 "
 ```
 
-The script itself now fails fast with a clear message if `RFROM_GCS_TOKEN`
+The script itself now fails fast with a clear message if `NODD_GCS_TOKEN`
 points at a file that does not exist.
 
 ### 4. Run it
 
 ```sh
 source .venv/bin/activate                             # or: conda activate rfromv-nodd
-export RFROM_SCRATCH_DIR="$HOME/rfromv-scratch"
-export RFROM_GCS_TOKEN="$HOME/.config/gcloud/application_default_credentials.json"
+export NODD_SCRATCH_DIR="$HOME/rfromv-scratch"
+export NODD_GCS_TOKEN="$HOME/.config/gcloud/application_default_credentials.json"
 
-python rfrom_nodd.py --stream temp_stable --list      # plan only: no creds, no download
-python rfrom_nodd.py --stream temp_stable --blocks 0  # smoke-test one block end to end
-python rfrom_nodd.py --stream temp_stable --all       # the production run
+python nodd.py --stream temp_stable --list            # plan only: no creds, no download
+python nodd.py --stream temp_stable --blocks 0        # smoke-test one block end to end
+python nodd.py --stream temp_stable --all             # the production run
 ```
 
 Under pixi, drop the activation line and prefix each command with `pixi run`,
@@ -303,10 +313,10 @@ dropped SSH session or a sleeping laptop can kill:
 ```sh
 tmux new -s rfrom                                     # then run inside; detach with Ctrl-b d
 # or, without tmux:
-nohup python rfrom_nodd.py --stream temp_stable --all > temp_stable.log 2>&1 &
+nohup python nodd.py --stream temp_stable --all > temp_stable.log 2>&1 &
 
 # macOS: keep the machine awake for the whole run
-caffeinate -i python rfrom_nodd.py --stream temp_stable --all
+caffeinate -i python nodd.py --stream temp_stable --all
 ```
 
 Interruptions are cheap. The script skips any block already present in the
@@ -334,7 +344,7 @@ pressure plane at a time (~415 MB per chunk, a few in flight at once).
 
 ## Running the batch script
 
-`rfrom_nodd.py` requires an explicit `--stream` **and** an explicit
+`nodd.py` requires an explicit `--stream` **and** an explicit
 `--blocks RANGE` or `--all` — nothing is processed implicitly. Run one stream at a
 time (one VM per stream, or split a stream across VMs with disjoint `--blocks`
 ranges). It is idempotent: before writing a block it checks whether the target
@@ -353,31 +363,31 @@ files already finished are untouched.
 
 ```sh
 # Plan only: print the block → monthly-file cross-walk, download nothing.
-python rfrom_nodd.py --stream temp_stable --list
+python nodd.py --stream temp_stable --list
 
 # Process a single block and upload it.
-python rfrom_nodd.py --stream temp_stable --blocks 0
+python nodd.py --stream temp_stable --blocks 0
 
 # Process EVERY block in the stream and upload them (a typical production run,
 # one stream per VM). Idempotent: already-uploaded blocks are skipped.
-python rfrom_nodd.py --stream temp_stable --all
+python nodd.py --stream temp_stable --all
 
 # Split a stream across two VMs (disjoint block ranges).
-python rfrom_nodd.py --stream sal_stable --blocks 0-8      # VM A
-python rfrom_nodd.py --stream sal_stable --blocks 9-16     # VM B
+python nodd.py --stream sal_stable --blocks 0-8      # VM A
+python nodd.py --stream sal_stable --blocks 9-16     # VM B
 
 # Whole stream, local test — build but don't upload, keep scratch files.
-python rfrom_nodd.py --stream temp_realtime --all --no-upload --keep-scratch
+python nodd.py --stream temp_realtime --all --no-upload --keep-scratch
 ```
 
 ### Flags
 
 | flag | meaning |
 |---|---|
-| `--stream <name>` | **required** — one of the six stream keys above |
+| `--stream <name>` | **required** — one of the six RFROM stream keys above (or GOBAI's `o2` / `no3`) |
 | `--blocks RANGE` | blocks to process: `3`, `0-4`, or `0,2,5` (mutually exclusive with `--all`) |
 | `--all` | process every block in the stream |
-| `--version` | product version prefix (default `v2.3`) |
+| `--version` | product version prefix (default `v2.3` for RFROM streams) |
 | `--list` | print the block → monthly-file plan and exit (no download) |
 | `--no-upload` | build files locally but do not upload |
 | `--force` | reprocess/overwrite even if the target object already exists |
@@ -388,9 +398,10 @@ A typical production run for one stream is `--all` on its own VM; start with
 
 ### Where things live in the code
 
-The `STREAMS` dict near the top of `rfrom_nodd.py` is the single place per-stream
-differences live (`dataset_id`, `data_var`, `var_attrs`, filename templates). The
-core functions mirror the notebook stages. Two correctness/performance choices are
+The `STREAMS` dict near the top of `nodd.py` is the single place per-stream
+differences live (`dataset_id`, `data_var`, `var_attrs`, filename templates, and
+which `PRODUCTS` entry — RFROM or GOBAI — supplies the bucket, default version
+and scratch default). The core functions mirror the notebook stages. Two correctness/performance choices are
 load-bearing and must not regress:
 
 - Open with `data_vars="minimal", coords="minimal", compat="override"` so
