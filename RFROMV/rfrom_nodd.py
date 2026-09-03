@@ -443,6 +443,26 @@ def process_block(stream, block, version, fs, nodd_dest, do_upload, force, keep_
 # CLI                                                                          #
 # --------------------------------------------------------------------------- #
 
+def check_netcdf_engine(p):
+    """Fail before downloading ~12 GB if the h5netcdf engine cannot actually open a file.
+
+    h5netcdf's HDF5 backend (h5py) is an optional extra, not a hard dependency:
+    `pip install h5netcdf` succeeds, `import h5netcdf` succeeds, xarray lists the
+    engine as available -- and then the first open_mfdataset dies with
+    "No module named 'h5py'", after the whole block has been downloaded
+    (GitHub issue #8). Check the import up front instead.
+    """
+    try:
+        import h5py  # noqa: F401
+    except ImportError:
+        p.error(
+            "the h5netcdf engine has no HDF5 backend: h5py is not installed.\n"
+            "h5py is an optional extra of h5netcdf, so it is easy to miss. Install it:\n"
+            "    pip install h5py          (or: pip install -r requirements.txt)\n"
+            "    conda install -c conda-forge h5py"
+        )
+
+
 def parse_blocks(spec, n_blocks):
     """Parse a --blocks spec ("3", "0-4", "0,2,5", "0-2,7") into a sorted index list."""
     indices = set()
@@ -509,6 +529,10 @@ def main(argv=None):
         p.error("specify --blocks RANGE or --all (nothing processed by default)")
     selected = list(range(len(blocks))) if args.all else parse_blocks(args.blocks, len(blocks))
     print(f"Selected blocks: {selected}\n")
+
+    # Preflight the environment before anything expensive: a missing h5py only
+    # surfaces on the first file open, i.e. after a block has been downloaded.
+    check_netcdf_engine(p)
 
     # Report the resolved scratch dir BEFORE creating it: if RFROM_SCRATCH_DIR is
     # unset off-hub this falls back to the hub path, and the failure should name it.

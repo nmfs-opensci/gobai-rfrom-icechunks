@@ -4,6 +4,10 @@
 xarray>=2025.12.0
 dask[array]>=2025.11.0
 h5netcdf>=1.7.3
+# h5netcdf declares h5py as an OPTIONAL extra (h5netcdf[h5py]), so plain
+# `pip install h5netcdf` leaves it with no HDF5 backend and every open/write
+# fails with "No module named 'h5py'" -- list it explicitly (GitHub issue #8).
+h5py>=3.12
 gcsfs>=2025.12.0
 pandas>=2.3.3
 numpy>=2.3.5
