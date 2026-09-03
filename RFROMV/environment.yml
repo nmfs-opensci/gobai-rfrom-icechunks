@@ -1,4 +1,4 @@
-# conda/mamba environment for RFROMV/rfrom_nodd.py (see README.md, "Running off-hub").
+# conda/mamba environment for the NODD batch script ../nodd.py (see README.md, "Running off-hub").
 #   conda env create -f environment.yml && conda activate rfromv-nodd
 # dask-core is the scheduler + array API without distributed/bokeh; the script
 # uses only the threaded scheduler, so the full `dask` metapackage is not needed.
