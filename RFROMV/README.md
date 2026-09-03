@@ -341,6 +341,16 @@ ranges). It is idempotent: before writing a block it checks whether the target
 object already exists in the bucket and skips it unless `--force`, so a
 resume-after-interrupt or a second VM on the same stream is safe.
 
+Downloads resume too. A monthly file is streamed to a `.part` file, checked that
+it opens as netCDF, and only then renamed into place, so anything sitting in
+`<scratch>/erddap/` is known-complete and is re-used instead of re-fetched — a
+re-run after a crash does not pay for the ~12 GB again. Flaky ERDDAP reads are
+retried with exponential backoff (4 attempts, 15/30/60 s), which is what makes a
+multi-hour `--all` run survive the transient timeouts the endpoint throws
+(issue #11). ERDDAP serves these files gzip-encoded and chunked with no
+`Content-Length` and no Range support, so a retry restarts that one file; the
+files already finished are untouched.
+
 ```sh
 # Plan only: print the block → monthly-file cross-walk, download nothing.
 python rfrom_nodd.py --stream temp_stable --list
