@@ -52,8 +52,12 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   Sharp's reply** on the correct units/standard_name — do not change the `no3`
   CF mapping in `nodd.py` until that lands. Env vars are now `NODD_SCRATCH_DIR`/`NODD_GCS_TOKEN`
   (old `RFROM_` names still honoured), scratch defaults per-product.
-  Next concrete step after merge: build one `no3` block, then run `o2 --all` and
-  `no3 --all` on separate VMs.
+  **`no3` block 17 also validated 2026-09-03** (bit-identical to source,
+  `cfchecker` clean) — same pipeline-mechanics result as `o2` block 17; the CF
+  name itself is still provisional pending Sharp. Detail in
+  `claude/notes/gobai-nodd.md`. PR #14 still has **zero reviews** — hold off on
+  `o2 --all` / `no3 --all` (first real writes to the public
+  `gs://noaa-oar-gobai` bucket, ~0.41 TB/hours each) until Eli reviews/merges.
 
 - **ERDDAP download timeout + re-download** (issue #11, DONE — PR #12 merged,
   `main` @ `a28b921`, branch deleted). Both symptoms had one cause: the `requests.head()`
