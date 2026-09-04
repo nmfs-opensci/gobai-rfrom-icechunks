@@ -251,16 +251,23 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 - A bad `--blocks` value raises a raw `ValueError` traceback rather than a clean
   argparse error. Pre-existing, untouched by #13.
-- `~7.5 GB` of GOBAI scratch is on the hub at
-  `/home/jovyan/shared-public/gobai-scratch/` (two sample monthly files, block
-  17's five sources, and its output). Delete when prototyping is done.
+- **13 GB** of GOBAI scratch at `/home/jovyan/shared-public/gobai-scratch/`
+  (14 files, all 2026-09-03). Safe to delete: both GOBAI streams are 18/18 in
+  the bucket, and the two block-17 outputs in `nodd/` differ from the published
+  copies by only 70 bytes each — `_NCProperties` and the `history` timestamp,
+  i.e. the VM that published them had newer h5netcdf/hdf5/h5py. Nothing holds
+  the directory open. Awaiting Eli's go-ahead.
+- **GOBAI's two tails still have the shrunk time chunk.** Verified 2026-09-04:
+  the published `o2` and `no3` block 17 are both `chunks=(19, 1, 180, 180)`,
+  `maxshape=19`. So `gobai_hr` cannot be built into an Icechunk store until
+  those two blocks are rebuilt with the current `nodd.py`, exactly as note §10
+  predicted. That is the next task after RFROM v2.3.
 
-- **`requirements.txt` does not cover `build_icechunk.py`.** It lists only
-  `nodd.py`'s dependencies; icechunk, virtualizarr and obstore appear nowhere
-  except a commented-out `%pip` line in the smoke-test notebook. icechunk was in
-  fact *not installed* on this hub on 2026-09-04 and had to be added by hand
-  (`icechunk==2.2.0`) before the rehearsal could run. Worth a second manifest or
-  an extras section before the issue #17 PR.
+- ~~`requirements.txt` does not cover `build_icechunk.py`.~~ **DONE** —
+  `requirements-icechunk.txt` added at the repo root (icechunk, virtualizarr,
+  zarr, obstore), installed alongside `requirements.txt`. Kept separate so a
+  NODD-only VM does not pull the Icechunk stack. Prompted by icechunk being
+  *not installed* on this hub on 2026-09-04, which blocked the first rehearsal.
 - `requirements.txt` (root) is unverified by installation — nothing in this repo
   installs it into a clean venv from scratch, which is exactly how issue #8 got
   through. A clean-venv smoke install would catch the next one. (Narrower than

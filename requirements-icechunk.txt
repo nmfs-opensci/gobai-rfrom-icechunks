@@ -1,0 +1,15 @@
+# Dependencies for build_icechunk.py, the virtual Icechunk builder (GitHub
+# issue #17). Install ALONGSIDE requirements.txt, which covers nodd.py:
+#
+#     pip install -r requirements.txt -r requirements-icechunk.txt
+#
+# Kept separate so a VM that only runs the NODD pipeline does not pull the
+# Icechunk stack. Lower bounds are the versions the store was built and
+# validated on (JupyterHub, Python 3.12.12) -- see
+# claude/notes/rfromv-icechunk.md for the API notes that go with them, since
+# several of these APIs moved recently.
+icechunk>=2.2.0
+virtualizarr>=2.2.1
+zarr>=3.1.5
+# virtualizarr's HDF parser reads the source headers through obstore.
+obstore>=0.8.2

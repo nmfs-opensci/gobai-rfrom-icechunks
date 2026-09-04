@@ -239,12 +239,12 @@ open — it is expected, and there is nothing to fix in the store. Background an
 the fallback plan are in §8 of
 [`../claude/notes/rfromv-icechunk.md`](../claude/notes/rfromv-icechunk.md).
 
-Reading needs `icechunk` and `virtualizarr`, which are **not** in the repo's
+Reading and building need `icechunk` and `virtualizarr`, which are **not** in
 [`../requirements.txt`](../requirements.txt) — that file covers `nodd.py` only.
-Install them alongside it:
+They live in [`../requirements-icechunk.txt`](../requirements-icechunk.txt):
 
 ```sh
-pip install icechunk virtualizarr
+pip install -r ../requirements.txt -r ../requirements-icechunk.txt
 ```
 
 ## Files in this directory
