@@ -105,12 +105,18 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   registry has both `numcodecs.zlib` and `numcodecs.shuffle`, and it already
   depends on `icechunk-js`, which reads *virtual* chunks and rewrites `gs://` to
   `https://storage.googleapis.com/`. **Two other things block it instead:**
-  (1) **`noaa-oar-rfrom` has no CORS policy** — anonymous ranged GETs work
-  (HTTP 206) but no `Access-Control-Allow-Origin` is returned and the preflight
-  carries no CORS headers, so a browser refuses both the store and the netCDF
-  byte ranges. Bucket-level setting, needs the NODD administrator, not fixable
-  from this repo. (2) the `(100, 1, 180, 180)` chunk shape means one global map
-  frame costs ~131 MB compressed / ~415 MB decompressed to draw a 4 MB field.
+  (1) **CORS — now RESOLVED.** Neither NODD bucket had a policy; Eli set one on
+  **both `noaa-oar-rfrom` and `noaa-oar-gobai`** on 2026-09-04:
+  `origin ["*"]`, `method ["HEAD","GET"]`,
+  `responseHeader ["Range","Content-Type","Content-Length","Content-Range"]`,
+  `maxAgeSeconds 3600`. **`Range` in `responseHeader` is the mandatory bit** —
+  chunk reads are byte-range requests and `Range` is not CORS-safelisted, so
+  without it every read fails with a generic CORS error. Do *not* list `OPTIONS`
+  in `method`; GCS answers preflights itself. Verified with curl on both buckets
+  (preflight 200, ranged GET 206) — **not yet verified in a browser**.
+  (2) the `(100, 1, 180, 180)` chunk shape means one global map
+  frame costs ~131 MB compressed / ~415 MB decompressed to draw a 4 MB field —
+  this one is unresolved and is now the real obstacle.
   **Do not reach for the uncompressed fallback on gridlook's account** — it would
   make (2) worse; browser visualisation wants a separate materialized,
   map-chunked store.

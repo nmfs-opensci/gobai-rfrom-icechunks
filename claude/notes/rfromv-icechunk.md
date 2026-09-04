@@ -249,7 +249,7 @@ revisitable only at a reprocess, and constrained there by netCDF readability
 rather than by Zarr. If a reprocess ever happens for chunking reasons, settle the
 codec question in the same pass.
 
-### Checked against gridlook, 2026-09-04 — the codecs are not the problem, CORS is
+### Checked against gridlook, 2026-09-04 — the codecs are not the problem
 
 [gridlook](https://github.com/d70-t/gridlook) is the concrete test case: a
 browser WebGL viewer for cloud-hosted Zarr. Desk investigation only — nothing was
@@ -279,22 +279,41 @@ So the "may not be supported by other zarr implementations" warning does **not**
 describe this consumer. Note that this does not generalize: zarrita having the
 codecs says nothing about zarrs (Rust), zarr-java, or TensorStore.
 
-**Blocker 1 — the bucket has no CORS policy.** Tested live against
-`storage.googleapis.com/noaa-oar-rfrom/...`:
+**Blocker 1 — CORS. RESOLVED 2026-09-04 by Eli, who is a bucket admin.**
 
-| test | result |
-|---|---|
-| anonymous ranged GET | **HTTP 206**, `content-range` honoured — public reads and byte ranges work |
-| `Access-Control-Allow-Origin` on that GET | **absent** |
-| `OPTIONS` preflight with `Origin` + `Access-Control-Request-Method` | HTTP 200, **no `access-control-*` headers at all** |
-| bucket metadata `cors` field | **not set** |
+Originally neither NODD bucket had any CORS policy: anonymous ranged GETs
+returned HTTP 206 and honoured `content-range`, but no `Access-Control-Allow-Origin`
+came back, the `OPTIONS` preflight carried no `access-control-*` headers at all,
+and the bucket metadata `cors` field was unset. A browser refuses both halves in
+that state — the Icechunk metadata *and* the netCDF byte ranges.
 
-A browser will refuse both halves — the Icechunk metadata *and* the netCDF byte
-ranges. This is a bucket-level setting on `noaa-oar-rfrom`, needs whoever
-administers NODD, and it is the same one setting for both halves since the store
-and the files share a bucket. Nothing in this repo can fix it. Note gridlook's
-own README already states the requirement: it can view "any CORS-enabled, public
-Zarr dataset."
+Both `noaa-oar-rfrom` and `noaa-oar-gobai` now carry:
+
+```json
+[{"origin": ["*"],
+  "method": ["HEAD", "GET"],
+  "responseHeader": ["Range", "Content-Type", "Content-Length", "Content-Range"],
+  "maxAgeSeconds": 3600}]
+```
+
+Verified on both: preflight returns 200 with
+`access-control-allow-headers: Range,Content-Type,Content-Length,Content-Range`,
+and a ranged GET returns 206 with `access-control-allow-origin: *` and an
+`access-control-expose-headers` covering `Content-Range`/`Content-Length`/`Range`.
+One policy covers store and netCDFs because they share a bucket.
+
+Two things that matter if this is ever redone:
+
+- **`Range` in `responseHeader` is mandatory.** Every chunk read is a byte-range
+  request; `Range` is not CORS-safelisted, so the browser preflights it and GCS
+  only allows it if `Range` is listed. Omit it and nothing loads, with a generic
+  CORS error that does not mention ranges.
+- **Do not put `OPTIONS` in `method`.** GCS answers preflights itself and echoes
+  back exactly the methods configured. (An older NMFS bucket,
+  `nmfs_odp_nwfsc`, does list it; harmless but unnecessary.)
+
+**Still verified only with curl, not a browser.** The server now returns correct
+CORS headers. Whether gridlook renders the store is untested.
 
 **Blocker 2 — the chunk shape, which is much worse in a browser.** A single
 global map at one time and one level touches 32 chunks (4 x 8 tiles), each
@@ -303,6 +322,13 @@ decompressed in JS memory, to draw one 4 MB field.** Scrubbing time inside one
 100-step block is then cached, but crossing a block boundary re-fetches the lot.
 This is §7's read-performance finding, and it is the thing that would actually
 make gridlook feel broken. It is a property of the netCDFs, not of the store.
+
+**Not yet checked at all**, and cheap to settle once a store exists: whether
+gridlook handles a 4D dataset with a 58-level vertical dimension and offers a
+level selector; whether it needs a per-dataset catalog/config JSON; whether it
+handles rectilinear lat/lon as well as the healpix grids it is built around; CF
+time decoding in-browser; and whether `icechunk-js` 0.6.0 reads the on-disk
+format `icechunk` 2.2.0 (Python) writes.
 
 **Consequence for the uncompressed-netCDF fallback in §8.** Publishing
 uncompressed would remove a non-problem and make blocker 2 strictly worse
