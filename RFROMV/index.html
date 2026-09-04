@@ -8,19 +8,34 @@
 <link rel="icon" type="image/png" href="https://www.pmel.noaa.gov/gobai/favicon-32.png">
 <link href="https://www.pmel.noaa.gov/gobai/gobai.css" rel="stylesheet" type="text/css">
 <style>
-/* --- added for navigation and data-access sections --- */
-.rf-nav { display:flex; flex-wrap:wrap; gap:.3em 1.6em; background:#0b5c8a;
-          padding:.65em 1.1em; margin:0 0 1.4em; }
-.rf-nav a { color:#fff; text-decoration:none; font-weight:600; font-size:.95em; }
-.rf-nav a:hover, .rf-nav a:focus { text-decoration:underline; }
-h2.sec { border-bottom:2px solid #0b5c8a; padding-bottom:.2em; margin-top:2.2em; }
-h3.ver { border-left:5px solid #0b5c8a; background:#eef3f7; padding:.4em .7em;
+/* --- added for navigation and data-access sections.
+       Colours are gobai.css's own: #004F98 link blue, #41B7C5 hover teal. --- */
+.rf-nav {
+	display:flex; flex-wrap:wrap; justify-content:center; gap:.4em 1.6em;
+	background:#004F98; padding:.7em 1.1em; border-radius:3px;
+	/* margin-bottom only, as a longhand: gobai.css centres nav with
+	   "margin: 0 auto" at >=960px and uses "margin: 15px" below that.
+	   The shorthand would clobber both. */
+	margin-bottom:1.4em;
+	text-align:center;
+}
+/* Must out-specify "nav a:link" in gobai.css (0,1,2), or its blue wins here. */
+.rf-nav a, .rf-nav a:link, .rf-nav a:visited {
+	color:#fff; text-decoration:none; font-weight:600; font-size:1em;
+	margin-right:0;   /* gobai.css adds 20px; gap handles spacing instead */
+}
+/* Hover keeps white + underline: gobai.css's #41B7C5 teal is only 3.42:1 on
+   this blue, which fails WCAG AA for normal text. White is 8.17:1. */
+.rf-nav a:hover, .rf-nav a:focus { color:#fff; text-decoration:underline; }
+
+h2.sec { border-bottom:2px solid #004F98; padding-bottom:.2em; margin-top:2.2em; }
+h3.ver { border-left:5px solid #004F98; background:#eef3f7; padding:.4em .7em;
          margin:1.7em 0 .3em; font-size:1.05em; }
 .ver-note { font-size:.9em; color:#555; margin:.2em 0 .7em; }
 table.dl { border-collapse:collapse; margin:.5em 0 1em; font-size:.93em; }
 table.dl th, table.dl td { border:1px solid #d7dde3; padding:.35em .75em; text-align:left; }
 table.dl th { background:#f4f6f8; }
-.cloud pre { background:#f4f6f8; border:1px solid #d7dde3; border-left:3px solid #0b5c8a;
+.cloud pre { background:#f4f6f8; border:1px solid #d7dde3; border-left:3px solid #004F98;
              padding:.75em 1em; overflow-x:auto; font-size:.88em; line-height:1.45; }
 .cloud code, code { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
 .cloud table { border-collapse:collapse; margin:1em 0; font-size:.92em; }
