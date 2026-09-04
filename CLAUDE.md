@@ -174,8 +174,23 @@ only, nothing copied. For RFROM v2.3 that is
 `gs://noaa-oar-rfrom/icechunk/v2.3`: one dataset, one 1719-step time axis, the
 four science variables plus a `data_mode(time)` int8 flag (0 stable, 1 realtime)
 derived from a single `realtime_start` date in the config. Config-driven like
-`nodd.py` (`STORES`); `gobai_hr` is configured too and needs only its two 19-step
-tails rewritten with a padded chunk first.
+`nodd.py` (`STORES`). **GOBAI HR is published too** (issue #26):
+`gs://noaa-oar-gobai/icechunk/v202606`, `o2` and `no3` on the same 1719-step
+weekly axis, with **no `data_mode`** — `realtime_start` is `None`, since GOBAI HR
+has no stable/realtime split.
+
+Three things the GOBAI build established that apply to every store, all in
+`claude/notes/gobai-icechunk.md`:
+
+- **`commit()` is called with `rebase_tries=0`.** Icechunk defaults it to 1000
+  and will retry a spurious conflict forever; these builds are single-writer, so
+  a conflict is always a bug. Do not restore the default.
+- **`build()` opens the destination repository before the concat loop**, so a
+  credentials problem costs seconds rather than the ~12-minute header parse.
+- **Never diagnose a store anonymously right after building it.** The branch
+  pointer lives in a public object served `cache-control: max-age=3600`, so an
+  anonymous reader can see the pre-commit snapshot for an hour and the store
+  looks broken when it is fine. Use credentials, or wait the hour.
 
 Two rules govern whether a store is possible at all, and both are about the
 netCDFs rather than the store: every file feeding one variable must share one
