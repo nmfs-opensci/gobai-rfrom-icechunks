@@ -108,6 +108,36 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
   **Next:** GOBAI HR is issue #26.
 
+- **Landing page: how to open the data** (issue #27, **DONE** — PR #28 merged
+  2026-09-04, branch deleted, issue closed). `RFROMV/index.html` is the source of
+  `gs://noaa-oar-rfrom/index.html`; it linked only to ERDDAP and said nothing
+  about the NODD data. Now has a nav bar (About / Data Access ERDDAP / Download /
+  Code), griddap links instead of `/files/` listings, per-version blocks so the
+  V2.3–V2.2–V2.1 breaks are visible, and reader instructions for Python
+  (Icechunk + netCDF) and R. `RFROMV/README.md` mirrors it.
+
+  Things worth not rediscovering:
+  - **R streams netCDF fine** — append `#mode=bytes` to the HTTPS URL. Measured
+    against a 7.5 GB remote file: `ncdf4::nc_open` 4.3 s, slice read 0.9 s.
+    `RNetCDF` too. Byte-range is a netCDF-C build option, so a download fallback
+    is documented. R dimension order is reversed: `(lon, lat, pressure, time)`.
+  - **Reading the Icechunk store does not need `virtualizarr`** — it is
+    build-time only. `icechunk zarr xarray` is the reader's install line.
+  - **The bucket does browse**, via the Cloud console
+    (`console.cloud.google.com/storage/browser/noaa-oar-rfrom/...`), which needs
+    a Google sign-in but no project or permissions. `storage.googleapis.com/<prefix>/`
+    404s — that is the endpoint, not permissions. The XML listing
+    (`?prefix=...&delimiter=/`) works with no account.
+  - **`index.html` is CDN-cached for an hour** (`max-age=3600`). Verify uploads
+    with `?cb=$RANDOM` or a stale copy reads as a failed upload. Viewers see the
+    old page for that hour; a shorter max-age on this object is worth considering.
+  - **`gobai.css` will out-specify your CSS.** `nav a:link` is (0,1,2); a bare
+    `.rf-nav a` (0,1,1) loses. And its `margin: 0 auto` centring dies if you set
+    the `margin` shorthand — use longhands. There is no browser on the hub, so
+    the cascade was simulated to check.
+  - Every code block on the page and in the README was executed before
+    publishing. Keep that standard.
+
   **Also settled this session — the numcodecs warning.** The store's arrays carry
   `numcodecs.shuffle` + `numcodecs.zlib`, Zarr v3 *extension* codecs rather than
   core ones, so zarr-python reads the store and other implementations might not.
