@@ -1,9 +1,9 @@
 # RFROM v2.3 → Icechunk (issue #17) — design record
 
-Status: **design settled and verified end-to-end; waiting on the netCDF
-restructure to be run before the real store can be built.** Produced with the
-`virtual-icechunk` skill. Every number below was measured against the published
-files on 2026-09-03, not assumed.
+Status: **design settled and verified end-to-end; the netCDF restructure is
+almost complete, and the first full rehearsal build fails on one remaining
+block** — see §6.1. Produced with the `virtual-icechunk` skill. Every number
+below was measured against the published files on 2026-09-03/04, not assumed.
 
 ## 1. The two configurations
 
@@ -121,6 +121,55 @@ On real data, before any restructure was run:
 
 `RFROMV/icechunk-smoke-test.ipynb` is that test, and it passes as written.
 
+### 6.1 First full rehearsal build, 2026-09-04 — fails on `temp_error` block 17
+
+`python build_icechunk.py --store rfrom_v23 --local-repo <dir>` against the
+restructured tree:
+
+```
+ocean_temperature   18 files -> (1719, 58, 720, 1440) chunks (100, 1, 180, 180)  (257s)
+ocean_salinity      18 files -> (1719, 58, 720, 1440) chunks (100, 1, 180, 180)  (341s)
+ocean_temperature_error: ValueError -- the files do not share one time chunk: [19, 100]
+```
+
+`concat_virtual`'s guard fired exactly as designed and named the block. Surveying
+all 36 error-stream files by header:
+
+| stream | chunk grid | issue #25 title |
+|---|---|---|
+| `temp` | uniform, tail padded to 100 | n/a |
+| `sal` | uniform, tail padded to 100 | n/a |
+| `sal_error` | uniform, tail padded to 100 | n/a |
+| `temp_error` | **block 17 still chunk 19** | **blocks 3-17 still say v2.2** |
+
+Reconstructed from bucket object timestamps: the temp/sal migration copy ran
+2026-09-03 23:21, their seam and tail blocks were rebuilt 23:48-00:35, and
+`sal_error`'s tail at 00:42 — all correct. A `temp_error --force` re-run then
+started 2026-09-04 01:14 to apply the issue #25 title correction, completed
+blocks 0, 1 and 2 at ~26 min each, and **died at 02:13 partway through block 3**,
+leaving 12 GB of scratch at `/home/jovyan/shared-public/rfromv-scratch/erddap/`
+ending in `RFROMV23_TEMP_ERROR_1999_09.nc.part`. No process was running 13 hours
+later; the run is dead, not slow. Cause of death unknown — nothing was captured.
+
+So `temp_error` is the only stream left, and it needs the re-run finished:
+
+    python nodd.py --stream temp_error --blocks 3-17 --force
+
+Two separate reasons, and they want different scopes — worth deciding
+deliberately rather than by accident:
+
+- **Block 17 alone blocks the store.** Its time chunk is 19, not 100. Nothing
+  downstream can work around it.
+- **Blocks 3-16 are only a metadata inconsistency.** They still carry the issue
+  #25 v2.2 `title`/`references` while blocks 0-2 now say v2.3. Rebuilding just
+  block 17 unblocks the Icechunk build but leaves the published stream
+  self-inconsistent: 0-2 and 17 saying v2.3, 3-16 saying v2.2. That is worse
+  than the uniform-but-wrong state it started in, so finishing the whole
+  3-17 range is the coherent choice. ~15 blocks x ~26 min = **~6.5 hours**.
+
+Downloads are resumable (complete monthly files are skipped, the `.part` file
+restarts), so the re-run does not repeat the 12 GB already fetched for block 3.
+
 ## 7. Read performance
 
 - **Metadata**: ~134 k chunk references (18 × 58 × 4 × 8 per variable × 4). Small
@@ -140,11 +189,132 @@ On real data, before any restructure was run:
   threads would help if that ever matters.
 - gzip + shuffle map to **numcodecs** codecs, which are outside the Zarr v3 core
   spec: the store reads from zarr-python but may not open in other Zarr
-  implementations. Document this for users.
+  implementations. Full analysis and the fallback plan in §8.
 
-## 8. Separate finding: `temp_error` netCDFs are labelled v2.2 (issue #25)
+## 8. Codec compatibility: the store does not open in every Zarr implementation
 
-All 18 published `temp_error` files carry `title = "RFROM v2.2"` and
+The virtual arrays carry `numcodecs.shuffle` + `numcodecs.zlib`, and zarr-python
+warns on every build:
+
+> Numcodecs codecs are not in the Zarr version 3 specification and may not be
+> supported by other zarr implementations.
+
+**This is forced, not chosen.** The NODD netCDFs are written with HDF5's deflate
+filter at level 4 plus the shuffle filter. HDF5's deflate emits a *zlib*-framed
+stream (RFC 1950 — 2-byte header, Adler-32 trailer); Zarr v3's core `gzip` codec
+is defined on *gzip* framing (RFC 1952 — magic bytes, CRC32 trailer). Same
+DEFLATE underneath, incompatible containers, so a decoder pointed at one with the
+other fails. VirtualiZarr maps the filter accordingly — `parsers/hdf/filters.py`
+carries the literal `"gzip": "zlib"` entry and `codecs.py` prefixes the
+`numcodecs.` namespace. Shuffle has no standalone codec in the v3 core at all
+(blosc's internal shuffle is a different byte layout), so it lands on
+`numcodecs.shuffle` for the same reason.
+
+A virtual store holds byte-range references into HDF5 files it does not own and
+cannot rewrite, so the codec chain must describe those bytes exactly as they are.
+**Any codec chain that does not raise this warning is a chain that cannot decode
+this data.** Nothing in `build_icechunk.py` can act on it, and it is left
+unsilenced deliberately — it fires ~3 times per build (Python dedups it), which
+is not enough noise to be worth a filter.
+
+`numcodecs.*` is a registered extension namespace in the Zarr v3 extension
+registry, so the store is spec-conformant: it uses extension codecs rather than
+core ones. zarr-python decodes it, which covers the intended consumers
+(xarray + icechunk from Python). Support in other implementations varies by
+codec and by version.
+
+### If this becomes a real problem
+
+The fix is on the **netCDF** side, not in the store. Eli's call, 2026-09-04:
+if the codecs turn out to block real consumers, **publish the NODD netCDFs
+uncompressed**. An uncompressed netCDF virtualizes to the core `bytes` codec
+alone and the store opens anywhere.
+
+Cost, computed from the array shape rather than estimated: 1719 x 58 x 720 x 1440
+float32 is **413.5 GB per variable, 1.65 TB for the four**, against 526.6 GB
+published today — **3.1x the storage**, plus a full reprocess of all 72 blocks.
+Per stream the ratio runs 2.7x (`temp_error`) to 4.3x (`sal`).
+
+Options considered, and why the others lose:
+
+| option | outcome |
+|---|---|
+| drop shuffle, keep deflate | still `numcodecs.zlib` — the warning does not go away |
+| rewrite with blosc via `hdf5plugin` | core `blosc` codec, no warning, **but** the netCDFs then need a filter plugin to open at all, which guts the primary NODD deliverable |
+| **uncompressed netCDFs** | core `bytes` only, store opens anywhere, 3.1x storage |
+| materialize the store with core codecs | copies 526 GB and abandons the virtual design entirely |
+
+Same category as the chunk shape in §7: a property inherited from the netCDFs,
+revisitable only at a reprocess, and constrained there by netCDF readability
+rather than by Zarr. If a reprocess ever happens for chunking reasons, settle the
+codec question in the same pass.
+
+### Checked against gridlook, 2026-09-04 — the codecs are not the problem, CORS is
+
+[gridlook](https://github.com/d70-t/gridlook) is the concrete test case: a
+browser WebGL viewer for cloud-hosted Zarr. Desk investigation only — nothing was
+rendered, because the store does not exist yet.
+
+**Verdict: the codec chain is fine, and two other things block it.**
+
+The exact chain the store writes, dumped from a real virtual dataset rather than
+assumed:
+
+```
+{"name": "bytes",             "configuration": {"endian": "little"}}
+{"name": "numcodecs.shuffle", "configuration": {"elementsize": 4}}
+{"name": "numcodecs.zlib",    "configuration": {"level": 4}}
+```
+
+gridlook pins `zarrita ^0.7.4`, and that version's codec registry
+(`packages/zarrita/src/codecs.ts` at tag `zarrita@0.7.4`) registers **all three**,
+`numcodecs.zlib` and `numcodecs.shuffle` included, with its own
+`./codecs/zlib.js` and `./codecs/shuffle.js` implementations. gridlook also
+already depends on `icechunk-js ^0.6.0`, a read-only Icechunk reader for the
+browser that supports **virtual** chunk payloads and rewrites `gs://bucket/key`
+to `https://storage.googleapis.com/bucket/key`. Icechunk support landed in
+gridlook 1.1.0 (2026-06-01), icechunk-group datasets in 1.3.0.
+
+So the "may not be supported by other zarr implementations" warning does **not**
+describe this consumer. Note that this does not generalize: zarrita having the
+codecs says nothing about zarrs (Rust), zarr-java, or TensorStore.
+
+**Blocker 1 — the bucket has no CORS policy.** Tested live against
+`storage.googleapis.com/noaa-oar-rfrom/...`:
+
+| test | result |
+|---|---|
+| anonymous ranged GET | **HTTP 206**, `content-range` honoured — public reads and byte ranges work |
+| `Access-Control-Allow-Origin` on that GET | **absent** |
+| `OPTIONS` preflight with `Origin` + `Access-Control-Request-Method` | HTTP 200, **no `access-control-*` headers at all** |
+| bucket metadata `cors` field | **not set** |
+
+A browser will refuse both halves — the Icechunk metadata *and* the netCDF byte
+ranges. This is a bucket-level setting on `noaa-oar-rfrom`, needs whoever
+administers NODD, and it is the same one setting for both halves since the store
+and the files share a bucket. Nothing in this repo can fix it. Note gridlook's
+own README already states the requirement: it can view "any CORS-enabled, public
+Zarr dataset."
+
+**Blocker 2 — the chunk shape, which is much worse in a browser.** A single
+global map at one time and one level touches 32 chunks (4 x 8 tiles), each
+holding 100 time steps: **~131 MB compressed to download and ~415 MB
+decompressed in JS memory, to draw one 4 MB field.** Scrubbing time inside one
+100-step block is then cached, but crossing a block boundary re-fetches the lot.
+This is §7's read-performance finding, and it is the thing that would actually
+make gridlook feel broken. It is a property of the netCDFs, not of the store.
+
+**Consequence for the uncompressed-netCDF fallback in §8.** Publishing
+uncompressed would remove a non-problem and make blocker 2 strictly worse
+(~415 MB per map frame with no compression on the wire). If browser
+visualisation becomes a real requirement, the answer is not uncompressed
+netCDFs — it is a **separate materialized, map-chunked store** built for that
+purpose, alongside the virtual one. Do not spend 3.1x storage on the codec
+question for gridlook's sake.
+
+## 9. Separate finding: `temp_error` netCDFs are labelled v2.2 (issue #25)
+
+All 18 published `temp_error` files carried `title = "RFROM v2.2"` and
 `references = "Lyman, J.M. and G.C. Johnson. 2026. submitted"`, while every other
 v2.3 stream says v2.3 and the full "High Resolution Random Field..." reference. It
 is a file-level global attribute ERDDAP serves for `argo_rfromv23_temp_error` —
@@ -155,11 +325,20 @@ class as the salinity mislabel. Tracked as **issue #25**, with the evidence that
 it is a label and not a data problem: `title` and `references` are the only
 attributes that differ from the other v2.3 streams, and there is no v2.2
 temperature-error product on this grid at all (`argo_rfromv22_error` is
-dimensioned on `depth` — it is the OHC anomaly product, issue #21). Deliberately
-not fixed here, because overriding it on one rebuilt block would make that stream
-inconsistent with its own other 17 files.
+dimensioned on `depth` — it is the OHC anomaly product, issue #21).
 
-## 9. Reusability
+**Resolved in `nodd.py`** (commit 83a4d04): a stream entry may carry a
+`global_attrs` dict overriding file globals, and `temp_error` uses it to restore
+the v2.3 title and the full citation. Metadata only, values untouched, and the
+correction is recorded in each file's `history`. Applying it means **rewriting
+every `temp_error` block**, which is why it rode along with the issue #17
+restructure rather than being done on its own.
+
+That rewrite is **incomplete**: blocks 0-2 carry the corrected v2.3 title, blocks
+3-17 still say v2.2, because the re-run died. See §6.1 — this is now the same
+piece of work as unblocking the store.
+
+## 10. Reusability
 
 `build_icechunk.py` is config-driven like `nodd.py`; `STORES` holds the bucket,
 prefixes, stream→variable map and `realtime_start` per product.
@@ -171,7 +350,7 @@ prefixes, stream→variable map and `realtime_start` per product.
   `sal_v22` ends 2025-12 (1719), and a Zarr group has one length per dimension.
   Two stores, or one store when the axes agree. Decide when we get there.
 
-## 10. Versions
+## 11. Versions
 
 icechunk 2.2.0, virtualizarr 2.2.1, xarray 2025.12.0, zarr 3.1.5, obstore 0.8.2,
 gcsfs 2025.12.0, h5py 3.13.0, numpy 2.3.5, Python 3.12.12.

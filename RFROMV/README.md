@@ -204,6 +204,49 @@ every file feeding one variable shares one chunk grid, and only the **last** fil
 may be short (written with an unlimited time dimension so HDF5 pads its edge
 chunk). Zarr has no variable-length chunks, so a store cannot paper over either.
 
+### Reading the store
+
+```python
+import icechunk as ic, xarray as xr, zarr
+
+zarr.config.set({"async.concurrency": 128})   # the default of 10 is why a store "feels slow"
+
+storage = ic.gcs_storage(bucket="noaa-oar-rfrom", prefix="icechunk/v2.3", anonymous=True)
+prefix = "gs://noaa-oar-rfrom/netcdf/v2.3/"
+repo = ic.Repository.open(
+    storage,
+    authorize_virtual_chunk_access=ic.containers_credentials(
+        {prefix: ic.gcs_credentials(anonymous=True)}
+    ),
+)
+ds = xr.open_zarr(repo.readonly_session("main").store, consolidated=False, chunks={})
+```
+
+The store and the netCDFs it references are **two independent credential
+settings**, even though both live in the same public bucket. A reader that
+configures only the repository gets metadata and no data — the
+`authorize_virtual_chunk_access` argument above is what makes the byte ranges
+readable.
+
+**Compatibility caveat.** The arrays carry `numcodecs.shuffle` +
+`numcodecs.zlib`. Those are *extension* codecs in the Zarr v3 registry, not core
+spec codecs, because the netCDFs are compressed with HDF5's deflate filter (which
+emits zlib framing, RFC 1950) plus shuffle (which has no core v3 equivalent),
+and a virtual store must describe the bytes exactly as they are rather than
+re-encode them. **The store reads from zarr-python; other Zarr implementations
+may refuse it.** zarr-python emits a warning to this effect on every build and
+open — it is expected, and there is nothing to fix in the store. Background and
+the fallback plan are in §8 of
+[`../claude/notes/rfromv-icechunk.md`](../claude/notes/rfromv-icechunk.md).
+
+Reading needs `icechunk` and `virtualizarr`, which are **not** in the repo's
+[`../requirements.txt`](../requirements.txt) — that file covers `nodd.py` only.
+Install them alongside it:
+
+```sh
+pip install icechunk virtualizarr
+```
+
 ## Files in this directory
 
 ### Deliverables
