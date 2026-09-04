@@ -251,17 +251,23 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 - A bad `--blocks` value raises a raw `ValueError` traceback rather than a clean
   argparse error. Pre-existing, untouched by #13.
-- **13 GB** of GOBAI scratch at `/home/jovyan/shared-public/gobai-scratch/`
-  (14 files, all 2026-09-03). Safe to delete: both GOBAI streams are 18/18 in
-  the bucket, and the two block-17 outputs in `nodd/` differ from the published
-  copies by only 70 bytes each — `_NCProperties` and the `history` timestamp,
-  i.e. the VM that published them had newer h5netcdf/hdf5/h5py. Nothing holds
-  the directory open. Awaiting Eli's go-ahead.
-- **GOBAI's two tails still have the shrunk time chunk.** Verified 2026-09-04:
-  the published `o2` and `no3` block 17 are both `chunks=(19, 1, 180, 180)`,
-  `maxshape=19`. So `gobai_hr` cannot be built into an Icechunk store until
-  those two blocks are rebuilt with the current `nodd.py`, exactly as note §10
-  predicted. That is the next task after RFROM v2.3.
+- ~~13 GB of GOBAI scratch at `/home/jovyan/shared-public/gobai-scratch/`.~~
+  **DELETED 2026-09-04** with Eli's go-ahead, along with the issue #11
+  diagnostic `/home/jovyan/erddap-head-check.sh`. Both GOBAI streams were 18/18
+  in the bucket first; the two block-17 outputs in `nodd/` differed from the
+  published copies by only 70 bytes each (`_NCProperties` and the `history`
+  timestamp — the VM that published them had newer h5netcdf/hdf5/h5py), so
+  nothing unpublished was lost. `nodd.py` recreates scratch dirs with
+  `makedirs(exist_ok=True)`, so nothing needs restoring.
+- **GOBAI HR virtual Icechunk → now tracked as issue #26** (open, not started).
+  Verified 2026-09-04: the published `o2` and `no3` block 17 are both
+  `chunks=(19, 1, 180, 180)`, `maxshape=19`, so both tails need rebuilding
+  before `gobai_hr` can be built — two blocks, not thirty-six. **Depends on #17
+  merging**, since `unlimited_dims` exists only on that branch. CORS is already
+  set on `noaa-oar-gobai`. The issue carries what does and does not carry over
+  from #17 (no `data_mode` — `realtime_start` is null — no migration, no #25
+  equivalent) and the open question of whether GOBAI and RFROM should ever share
+  one store. Eli will do the work when he picks the task up.
 
 - ~~`requirements.txt` does not cover `build_icechunk.py`.~~ **DONE** —
   `requirements-icechunk.txt` added at the repo root (icechunk, virtualizarr,
