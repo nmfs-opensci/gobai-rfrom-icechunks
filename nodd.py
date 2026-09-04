@@ -195,6 +195,14 @@ ERDDAP_GRIDDAP = "https://data.pmel.noaa.gov/pmel/erddap/griddap"
 #     is sea_water_absolute_salinity (units-consistent).                        #
 # --------------------------------------------------------------------------- #
 
+# The v2.3 citation, as published in every correct v2.3 stream. Byte-for-byte
+# from the files: en-dash (U+2013) before "Machine Learning", trailing space.
+REFERENCE_V23 = (
+    "Lyman, J.M. and G.C. Johnson. 2026. High Resolution Random Forest Regression "
+    "Ocean Maps (RFROM) of Temperature and Salinity, Submitted Journal of "
+    "Geophysical Research \u2013 Machine Learning and Computation "
+)
+
 STREAMS = {
     "temp_stable": {
         "product": "rfrom",
@@ -226,6 +234,21 @@ STREAMS = {
             "standard_name": "sea_water_conservative_temperature standard_error",
             "units": "degree_Celsius",
         },
+        # The source files' own globals say "RFROM v2.2" with a stub reference,
+        # while every other v2.3 stream says v2.3 with the full citation. It is a
+        # stale label on v2.3 data, not v2.2 data (GitHub issue #25): title and
+        # references are the ONLY attributes that differ from the other streams,
+        # ERDDAP's dataset title for argo_rfromv23_temp_error is correct, and
+        # there is no v2.2 temperature-error product on this grid to point at --
+        # argo_rfromv22_error is dimensioned on depth, i.e. the OHC anomaly
+        # product (issue #21). Metadata only; no value is touched. The strings
+        # below are copied byte-for-byte from the published sal_error and
+        # temp_stable files, en-dash and trailing space included.
+        "global_attrs": {
+            "title": "RFROM v2.3",
+            "references": REFERENCE_V23,
+        },
+        "global_attrs_note": "GitHub issue #25",
         "monthly_template": "RFROMV23_TEMP_ERROR_{year}_{month:02d}.nc",
         "out_template": "RFROMV23_TEMP_ERROR_{start}_{end}.nc",
     },
@@ -261,6 +284,57 @@ STREAMS = {
         },
         "monthly_template": "RFROMV23_SAL_ERROR_{year}_{month:02d}.nc",
         "out_template": "RFROMV23_SAL_ERROR_{start}_{end}.nc",
+    },
+
+    # --- RFROM v2.3 combined temp / sal (issue #17) ---------------------------- #
+    #
+    # The same weeks as temp_stable + temp_realtime, published as ONE continuous
+    # series instead of two, because the downstream Icechunk store cannot join
+    # them otherwise. PMEL splits the record because the 2025 weeks are still
+    # provisional; that distinction is preserved in the Icechunk store as a
+    # data_mode(time) flag derived from ``realtime_start`` (see icechunk.py),
+    # rather than by splitting the files.
+    #
+    # Why one series and not two: virtualizing a store means concatenating each
+    # file's chunk grid, and Zarr has no variable-length chunks. temp_stable ends
+    # mid-block (1670 steps = 16x100 + 70), so a merged temp array would need a
+    # 70-long chunk in the MIDDLE of its time axis -- illegal in Zarr no matter
+    # how the netCDFs are written. Merging the two records at the netCDF layer is
+    # what makes the store possible at all. See claude/notes/rfromv-icechunk.md.
+    #
+    # Blocks 0-15 (time steps 0-1599) are byte-for-byte the same data as
+    # temp_stable's blocks 0-15: same weeks, same monthly sources, same CF pass.
+    # Copy them across server-side rather than re-downloading ~200 GB from
+    # ERDDAP -- see "Restructuring an existing tree" in RFROMV/README.md.
+    "temp": {
+        "product": "rfrom",
+        "data_var": "ocean_temperature",
+        "var_attrs": {
+            "standard_name": "sea_water_conservative_temperature",
+            "units": "degree_Celsius",
+        },
+        "sources": [
+            {"dataset_id": "argo_rfromv23_temp", "label": "STABLE",
+             "monthly_template": "RFROMV23_TEMP_STABLE_{year}_{month:02d}.nc"},
+            {"dataset_id": "argo_rfromv23_temp_realtime", "label": "REALTIME",
+             "monthly_template": "RFROMV23_TEMP_STABLE_{year}_{month:02d}_REALTIME.nc"},
+        ],
+        "out_template": "RFROMV23_TEMP_{mode}_{start}_{end}.nc",
+    },
+    "sal": {
+        "product": "rfrom",
+        "data_var": "ocean_salinity",
+        "var_attrs": {
+            "standard_name": "sea_water_absolute_salinity",
+            "units": "grams_per_kilogram",
+        },
+        "sources": [
+            {"dataset_id": "argo_rfromv23_sal", "label": "STABLE",
+             "monthly_template": "RFROMV23_SAL_STABLE_{year}_{month:02d}.nc"},
+            {"dataset_id": "argo_rfromv23_sal_realtime", "label": "REALTIME",
+             "monthly_template": "RFROMV23_SAL_STABLE_{year}_{month:02d}_REALTIME.nc"},
+        ],
+        "out_template": "RFROMV23_SAL_{mode}_{start}_{end}.nc",
     },
 
     # --- RFROM v2.2 / v2.1 (three streams) ------------------------------------ #
@@ -411,25 +485,100 @@ def erddap_time_axis(dataset_id):
     return pd.DatetimeIndex(times["time"])
 
 
-def make_file_blocks(stream, times, block_size=BLOCK_SIZE):
+def stream_sources(stream):
+    """The ERDDAP datasets a stream draws from, in time order.
+
+    Most streams have exactly one. A *combined* stream lists several: RFROM v2.3
+    temperature and salinity are each published by PMEL as a stable record plus a
+    realtime extension that continues it, and the NODD product joins the two into
+    one continuous series (see the ``temp`` entry, and issue #17 for why).
+    """
+    cfg = STREAMS[stream]
+    if "sources" in cfg:
+        return cfg["sources"]
+    return [{"dataset_id": cfg["dataset_id"],
+             "monthly_template": cfg["monthly_template"]}]
+
+
+def stream_time_axis(stream):
+    """Full time axis for a stream, and the source index each step comes from.
+
+    Segments are concatenated in order and each later one is clipped to steps
+    strictly after the previous segment's end, so where two sources overlap the
+    earlier (more authoritative) one wins. Today RFROM's stable and realtime
+    records abut exactly -- stable ends 2024-12-27, realtime starts 2025-01-03,
+    one 7-day step -- but a later realtime refresh could overlap.
+    """
+    times, origin = [], []
+    for i, src in enumerate(stream_sources(stream)):
+        seg = erddap_time_axis(src["dataset_id"])
+        if times:
+            seg = seg[seg > times[-1][-1]]
+        if len(seg) == 0:
+            continue
+        times.append(seg)
+        origin.append(np.full(len(seg), i))
+    return pd.DatetimeIndex(np.concatenate(times)), np.concatenate(origin)
+
+
+def make_file_blocks(stream, times, origin=None, block_size=BLOCK_SIZE):
     """Split the time axis into blocks and map each to its monthly source files.
+
+    ``origin`` is the per-step source index from ``stream_time_axis``; it lets a
+    block that straddles the stable/realtime seam pull its months from both
+    datasets, in order.
 
     Returns a list of dicts with keys: block, start, end, n_times, filename, urls.
     """
     cfg = STREAMS[stream]
-    files_url = f"{ERDDAP_FILES}/{cfg['dataset_id']}"
+    sources = stream_sources(stream)
     times = pd.DatetimeIndex(times)
+    origin = np.zeros(len(times), dtype=int) if origin is None else np.asarray(origin)
+
+    # A month must come from exactly one source, or open_mfdataset would be handed
+    # two files covering the same weeks. Cannot happen while the seam falls on a
+    # month boundary (it does today); fail loudly rather than silently if a future
+    # realtime refresh starts mid-month.
+    by_month = {}
+    for t, o in zip(times, origin):
+        by_month.setdefault((t.year, t.month), set()).add(int(o))
+    split = {m: srcs for m, srcs in by_month.items() if len(srcs) > 1}
+    if split:
+        month = sorted(split)[0]
+        raise ValueError(
+            f"stream {stream!r}: {month[0]}-{month[1]:02d} draws on more than one "
+            f"ERDDAP dataset ({[sources[i]['dataset_id'] for i in sorted(split[month])]}). "
+            "The stable/realtime seam must fall on a month boundary; it does not, "
+            "so the monthly files for that month would overlap in time."
+        )
+
     blocks = []
     for i in range(0, len(times), block_size):
         block_times = times[i:i + block_size]
-        months = block_times.to_period("M").unique()
-        urls = [
-            f"{files_url}/" + cfg["monthly_template"].format(year=m.year, month=m.month)
-            for m in months
-        ]
+        block_origin = origin[i:i + block_size]
+        urls, seen = [], set()
+        for t, o in zip(block_times, block_origin):
+            key = (int(o), t.year, t.month)
+            if key in seen:
+                continue
+            seen.add(key)
+            src = sources[int(o)]
+            urls.append(
+                f"{ERDDAP_FILES}/{src['dataset_id']}/"
+                + src["monthly_template"].format(year=t.year, month=t.month)
+            )
+        # {mode} names what is actually inside the file: STABLE, REALTIME, or
+        # STABLE_REALTIME for the block that spans the seam. Labels appear in the
+        # order the block meets them. Templates without {mode} ignore it.
+        labels, seen_labels = [], set()
+        for o in block_origin:
+            label = sources[int(o)].get("label")
+            if label and label not in seen_labels:
+                seen_labels.add(label)
+                labels.append(label)
         start, end = block_times[0], block_times[-1]
         filename = cfg["out_template"].format(
-            start=f"{start:%Y-%m-%d}", end=f"{end:%Y-%m-%d}"
+            start=f"{start:%Y-%m-%d}", end=f"{end:%Y-%m-%d}", mode="_".join(labels)
         )
         blocks.append({
             "block": i // block_size,
@@ -576,15 +725,37 @@ def build_dataset(stream, local_files, block, version):
 
     ds.attrs["Conventions"] = "CF-1.10, ACDD-1.3"
 
-    var_dims = ds[data_var].dims
-    # On-disk chunk sizes, capped at each dim so the short final block stays valid.
-    # Computed here so the history note records what was actually written -- a
-    # short final block gets a smaller time chunk than CHUNKS asks for.
-    chunksizes = tuple(min(CHUNKS[d], ds.sizes[d]) for d in var_dims)
+    # Global attributes the source files get wrong, corrected here. Metadata only:
+    # no data value is touched. The stream's entry carries the evidence.
+    overrides = cfg.get("global_attrs", {})
+    ds.attrs.update(overrides)
 
+    var_dims = ds[data_var].dims
+    # On-disk chunk sizes. The TIME chunk is always the full CHUNKS["time"], even
+    # when the block is shorter -- a short final block with a shrunken time chunk
+    # cannot be virtualized into the downstream Icechunk store, because Zarr has
+    # no variable-length chunk grid and VirtualiZarr refuses to concatenate
+    # arrays whose chunk shapes differ (issue #17). HDF5 only allows a chunk
+    # longer than its dimension when that dimension is unlimited, so a short
+    # block is written with time unlimited and HDF5 pads the edge chunk; the pad
+    # is fill value and compresses to almost nothing (measured: 1.05x on the
+    # 19-step temp_error tail). The spatial dims are still capped -- they are
+    # never short in practice, but a cap there would be harmless.
+    chunksizes = tuple(
+        CHUNKS[d] if d == "time" else min(CHUNKS[d], ds.sizes[d]) for d in var_dims
+    )
+    short_block = ds.sizes["time"] < CHUNKS["time"]
+    unlimited_dims = ["time"] if short_block else None
+
+    sources = ", ".join(s["dataset_id"] for s in stream_sources(stream))
     note = (
-        f"{stamp}: repackaged for NODD ({version}) from ERDDAP {cfg['dataset_id']} "
-        f"monthly files; rechunked to {chunksizes} ({', '.join(var_dims)})."
+        f"{stamp}: repackaged for NODD ({version}) from ERDDAP {sources} "
+        f"monthly files; rechunked to {chunksizes} ({', '.join(var_dims)})"
+        + (" with time unlimited (padded edge chunk)" if short_block else "")
+        + (f"; corrected {', '.join(sorted(overrides))} "
+           f"({cfg.get('global_attrs_note', 'see repository issues')})"
+           if overrides else "")
+        + "."
     )
     ds.attrs["history"] = note + "\n" + ds.attrs.get("history", "")
 
@@ -629,14 +800,16 @@ def build_dataset(stream, local_files, block, version):
     if cf_refinements and "mean_pressure_bnds" in ds.variables:
         encoding["mean_pressure_bnds"] = {"_FillValue": None}
 
-    print(f"    dims={dict(ds.sizes)}  on-disk chunks={chunksizes}")
-    return ds, encoding
+    print(f"    dims={dict(ds.sizes)}  on-disk chunks={chunksizes}"
+          + ("  (time unlimited, padded edge chunk)" if short_block else ""))
+    return ds, encoding, unlimited_dims
 
 
-def write_netcdf(ds, encoding, out_path):
+def write_netcdf(ds, encoding, out_path, unlimited_dims=None):
     """Write ds to out_path with the given encoding."""
     print(f"    writing {out_path} ...")
-    ds.to_netcdf(out_path, engine="h5netcdf", encoding=encoding, mode="w")
+    ds.to_netcdf(out_path, engine="h5netcdf", encoding=encoding, mode="w",
+                 unlimited_dims=unlimited_dims)
     print(f"    wrote {os.path.getsize(out_path) / 1e9:.2f} GB")
 
 
@@ -657,9 +830,9 @@ def process_block(stream, block, version, fs, nodd_dest, do_upload, force, keep_
         return "skipped"
 
     local_files = download_block(block)
-    ds, encoding = build_dataset(stream, local_files, block, version)
+    ds, encoding, unlimited_dims = build_dataset(stream, local_files, block, version)
     out_path = os.path.join(OUTPUT_DIR, filename)
-    write_netcdf(ds, encoding, out_path)
+    write_netcdf(ds, encoding, out_path, unlimited_dims=unlimited_dims)
     ds.close()
 
     result = "written"
@@ -759,8 +932,10 @@ def main(argv=None):
     )
     p.add_argument("--stream", choices=sorted(STREAMS), default=None,
                    help="Product stream to process (one at a time). "
-                        "RFROM v2.3: temp_stable, temp_realtime, temp_error, "
-                        "sal_stable, sal_realtime, sal_error. RFROM v2.2/v2.1: "
+                        "RFROM v2.3: temp, sal (each one continuous "
+                        "stable+realtime series), temp_error, sal_error; "
+                        "temp_stable, temp_realtime, sal_stable, sal_realtime "
+                        "are the superseded split form. RFROM v2.2/v2.1: "
                         "temp_v22, sal_v22, temp_v21. GOBAI: o2, no3. Required "
                         "unless --setup is given.")
     grp = p.add_mutually_exclusive_group()
@@ -799,10 +974,11 @@ def main(argv=None):
     product = PRODUCTS[STREAMS[stream]["product"]]
     version = args.version or STREAMS[stream].get("version") or product["default_version"]
     configure_paths(stream)
-    print(f"Stream: {stream}  ({STREAMS[stream]['dataset_id']})")
+    sources = stream_sources(stream)
+    print(f"Stream: {stream}  ({', '.join(s['dataset_id'] for s in sources)})")
 
-    times = erddap_time_axis(STREAMS[stream]["dataset_id"])
-    blocks = make_file_blocks(stream, times)
+    times, origin = stream_time_axis(stream)
+    blocks = make_file_blocks(stream, times, origin)
     print(f"{len(times)} time steps -> {len(blocks)} blocks\n")
 
     if args.list:

@@ -15,9 +15,9 @@ streams — pulls monthly ERDDAP netCDFs, blocks/rechunks/compresses them, and
 uploads to the product's NODD bucket. Run one stream at a time:
 
 ```sh
-python nodd.py --stream temp_stable --list    # preview the block plan, no download
-python nodd.py --stream temp_stable --blocks 0   # smoke-test one block
-python nodd.py --stream temp_stable --all        # production run, one VM per stream
+python nodd.py --stream temp --list      # preview the block plan, no download
+python nodd.py --stream temp --blocks 0  # smoke-test one block
+python nodd.py --stream temp --all       # production run, one VM per stream
 ```
 
 - `python nodd.py --help` — every flag, defaults, and more examples.
@@ -26,6 +26,23 @@ python nodd.py --stream temp_stable --all        # production run, one VM per st
   [`setup.md`](setup.md).
 - [`RFROMV/README.md`](RFROMV/README.md) / [`GOBAI-O2/README.md`](GOBAI-O2/README.md)
   — per-product stream tables and CF metadata notes.
+
+## Building the Icechunk stores
+
+`build_icechunk.py` (repo root) turns a published netCDF tree into a **virtual**
+Icechunk store: Zarr metadata and byte-range references only, so the netCDFs stay
+where they are and nothing is copied. One store merges every stream of a product
+into a single dataset on one time axis.
+
+```sh
+python build_icechunk.py --store rfrom_v23 --list               # what gets referenced
+python build_icechunk.py --store rfrom_v23 --local-repo /tmp/x  # dry run, no upload
+python build_icechunk.py --store rfrom_v23                      # build and validate
+```
+
+Run `RFROMV/icechunk-smoke-test.ipynb` before the first real build. The design
+record — including why the netCDF chunking had to change first — is in
+[`claude/notes/rfromv-icechunk.md`](claude/notes/rfromv-icechunk.md).
 
 ## Chunking
 

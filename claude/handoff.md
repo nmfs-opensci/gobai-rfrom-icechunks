@@ -6,8 +6,14 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 ## Repo state
 
 - Repo: `nmfs-opensci/gobai-rfrom-icechunks`, working on `/home/jovyan/gobai-rfrom-icechunks`.
-- Branch: `main`. **No open PRs. Issue #21 is open** (RFROM v2.2 Ocean Heat
-  Content → NODD; not started). PR #22 (`issue-20-rfromv-v22-v21-nodd`, issue
+- **Branch: `issue-17-rfromv-icechunk`** — 10 commits, pushed, clean, open as
+  **PR #24** ("Issue #17: virtual Icechunk store for RFROM v2.3", opened
+  2026-09-03, `Closes #17`). **Not merged, and not ready to merge** — the netCDF
+  reprocess it depends on is still running. This is the active work; see the
+  issue #17 entry below. **Open issues: #17
+  (in progress), #25 (`temp_error` labelled v2.2 — being fixed inside #17), #21**
+  (RFROM v2.2 Ocean Heat Content → NODD; not started).
+- Earlier history: PR #22 (`issue-20-rfromv-v22-v21-nodd`, issue
   #20) merged 2026-09-03; branch deleted, issue #20 auto-closed. PR #19
   (`issue-15-cleanup-rfromv-notebooks`, issue #15) merged 2026-09-03; branch
   deleted, issue #15 auto-closed. PR #18 (`issue-16-cleanup-help-readme`, issue
@@ -18,7 +24,7 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   `local-mac-run` #7, `scratch-dir-error` #9, `fix-h5py-dep` #10,
   `fix-erddap-download` #12) is also merged and deleted.
 - **The batch script lives at the repo root as `nodd.py`** (PR #14), covering
-  RFROM v2.3's six streams, RFROM v2.2/v2.1's three (`temp_v22`, `sal_v22`,
+  RFROM v2.3's streams (**six until issue #17 restructured them into four**), RFROM v2.2/v2.1's three (`temp_v22`, `sal_v22`,
   `temp_v21`, PR #22/issue #20), and GOBAI's two. `RFROMV/rfrom_nodd.py`, the
   back-compat shim from that promotion, is **removed** (PR #18/issue #16) —
   every VM run still using it had finished.
@@ -46,6 +52,86 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 - Unfixed findings → one GitHub issue per probable root cause.
 
 ## In progress / next
+
+- **RFROM v2.3 → virtual Icechunk** (issue #17, **IN PROGRESS**, branch
+  `issue-17-rfromv-icechunk`, no PR yet). Read
+  **`claude/notes/rfromv-icechunk.md`** first — it is the full design record and
+  every number in it is measured.
+
+  What it is: `build_icechunk.py` (new, repo root) merges every stream of a
+  product into one **100 % virtual** Icechunk store — Zarr metadata and
+  byte-range references only, nothing copied. RFROM v2.3 →
+  `gs://noaa-oar-rfrom/icechunk/v2.3`, one 1719-step time axis, four science
+  variables plus a `data_mode(time)` flag derived from one `realtime_start` date.
+
+  Why the netCDFs had to change: a virtual store cannot rewrite chunks, so every
+  file feeding one array must share one chunk grid. The published six-stream tree
+  broke that twice — `nodd.py` shrank the time chunk on short blocks, and
+  temp/sal were two series each (which would need a 70-long chunk *mid-axis*,
+  which Zarr cannot express at all). Eli chose to restructure the netCDFs rather
+  than materialize a hybrid store. `nodd.py` now joins stable+realtime into one
+  `temp`/`sal` series and writes short tails with the full time chunk padded via
+  `unlimited_dims`; `RFROMV/migrate_v23.py` did the server-side bucket copy of the
+  32 unchanged blocks (~200 GB of ERDDAP traffic saved).
+
+  **DONE as of 2026-09-04. The store is published at
+  `gs://noaa-oar-rfrom/icechunk/v2.3`** (snapshot `ERWNPYN2CDCJ5SGHHBBG`,
+  20 objects, 2.38 MB, referencing 526.6 GB). All 18 `temp_error` blocks were
+  rebuilt across several VMs, which fixed both the shrunk tail chunk and the
+  issue #25 v2.2 titles. Verified **anonymously** with the README recipe — opens,
+  `data_mode` 1670 stable / 49 realtime, and real data reads back through the
+  virtual references. `--validate` checks 16 endpoint samples across all four
+  variables: all match.
+
+  **A bug the real build found:** `build()` validated using the *writer's*
+  repository object, whose branch pointer on object storage still resolved to the
+  initial empty snapshot right after the commit — so validation raised
+  `GroupNotFoundError` against a store that was fine. Local rehearsals never hit
+  it. Fixed by reopening with `create=False` before validating. Detail in §6.2.
+
+  **Old prefixes retired 2026-09-04.** `temp_stable`, `temp_realtime`,
+  `sal_stable`, `sal_realtime` deleted — 36 objects, 225.5 GB. The v2.3 tree is
+  now exactly the four published streams, 72 files, 526.6 GB. Checked before
+  deleting: the store referenced zero old-prefix objects; the new tree was
+  complete and CRC-verified; and because blocks 16-17 were *rebuilt* from ERDDAP
+  rather than copied, the old realtime files' values were compared against the
+  store at three dates each for temp and sal — all identical. Note
+  `softDeletePolicy.retentionDurationSeconds` is **0** on this bucket, so the
+  deletion was permanent; recovery would mean re-downloading from ERDDAP.
+  Re-validated after deletion: 16/16 endpoint samples match and an anonymous
+  read still works across the old stable/realtime seam.
+
+  **Next:** merge PR #24. GOBAI HR is issue #26.
+
+  **Also settled this session — the numcodecs warning.** The store's arrays carry
+  `numcodecs.shuffle` + `numcodecs.zlib`, Zarr v3 *extension* codecs rather than
+  core ones, so zarr-python reads the store and other implementations might not.
+  It is forced: HDF5's deflate uses zlib framing where Zarr v3's core `gzip`
+  codec wants gzip framing, so no codec chain that avoids the warning can decode
+  the data. Nothing to fix in the store. Note §8 has the analysis, plus the
+  fallback Eli named if it ever bites — **publish the NODD netCDFs uncompressed**
+  (3.1x storage, 526.6 GB → 1.65 TB).
+
+  **Checked against gridlook (note §8, "Checked against gridlook"), and the
+  codecs turned out to be a non-issue.** gridlook pins `zarrita ^0.7.4`, whose
+  registry has both `numcodecs.zlib` and `numcodecs.shuffle`, and it already
+  depends on `icechunk-js`, which reads *virtual* chunks and rewrites `gs://` to
+  `https://storage.googleapis.com/`. **Two other things block it instead:**
+  (1) **CORS — now RESOLVED.** Neither NODD bucket had a policy; Eli set one on
+  **both `noaa-oar-rfrom` and `noaa-oar-gobai`** on 2026-09-04:
+  `origin ["*"]`, `method ["HEAD","GET"]`,
+  `responseHeader ["Range","Content-Type","Content-Length","Content-Range"]`,
+  `maxAgeSeconds 3600`. **`Range` in `responseHeader` is the mandatory bit** —
+  chunk reads are byte-range requests and `Range` is not CORS-safelisted, so
+  without it every read fails with a generic CORS error. Do *not* list `OPTIONS`
+  in `method`; GCS answers preflights itself. Verified with curl on both buckets
+  (preflight 200, ranged GET 206) — **not yet verified in a browser**.
+  (2) the `(100, 1, 180, 180)` chunk shape means one global map
+  frame costs ~131 MB compressed / ~415 MB decompressed to draw a 4 MB field —
+  this one is unresolved and is now the real obstacle.
+  **Do not reach for the uncompressed fallback on gridlook's account** — it would
+  make (2) worse; browser visualisation wants a separate materialized,
+  map-chunked store.
 
 - **RFROM v2.2/v2.1 temp+salinity → NODD** (issue #20, DONE — PR #22 merged
   2026-09-03, branch `issue-20-rfromv-v22-v21-nodd` deleted). The issue's
@@ -177,10 +263,29 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 - A bad `--blocks` value raises a raw `ValueError` traceback rather than a clean
   argparse error. Pre-existing, untouched by #13.
-- `~7.5 GB` of GOBAI scratch is on the hub at
-  `/home/jovyan/shared-public/gobai-scratch/` (two sample monthly files, block
-  17's five sources, and its output). Delete when prototyping is done.
+- ~~13 GB of GOBAI scratch at `/home/jovyan/shared-public/gobai-scratch/`.~~
+  **DELETED 2026-09-04** with Eli's go-ahead, along with the issue #11
+  diagnostic `/home/jovyan/erddap-head-check.sh`. Both GOBAI streams were 18/18
+  in the bucket first; the two block-17 outputs in `nodd/` differed from the
+  published copies by only 70 bytes each (`_NCProperties` and the `history`
+  timestamp — the VM that published them had newer h5netcdf/hdf5/h5py), so
+  nothing unpublished was lost. `nodd.py` recreates scratch dirs with
+  `makedirs(exist_ok=True)`, so nothing needs restoring.
+- **GOBAI HR virtual Icechunk → now tracked as issue #26** (open, not started).
+  Verified 2026-09-04: the published `o2` and `no3` block 17 are both
+  `chunks=(19, 1, 180, 180)`, `maxshape=19`, so both tails need rebuilding
+  before `gobai_hr` can be built — two blocks, not thirty-six. **Depends on #17
+  merging**, since `unlimited_dims` exists only on that branch. CORS is already
+  set on `noaa-oar-gobai`. The issue carries what does and does not carry over
+  from #17 (no `data_mode` — `realtime_start` is null — no migration, no #25
+  equivalent) and the open question of whether GOBAI and RFROM should ever share
+  one store. Eli will do the work when he picks the task up.
 
+- ~~`requirements.txt` does not cover `build_icechunk.py`.~~ **DONE** —
+  `requirements-icechunk.txt` added at the repo root (icechunk, virtualizarr,
+  zarr, obstore), installed alongside `requirements.txt`. Kept separate so a
+  NODD-only VM does not pull the Icechunk stack. Prompted by icechunk being
+  *not installed* on this hub on 2026-09-04, which blocked the first rehearsal.
 - `requirements.txt` (root) is unverified by installation — nothing in this repo
   installs it into a clean venv from scratch, which is exactly how issue #8 got
   through. A clean-venv smoke install would catch the next one. (Narrower than
