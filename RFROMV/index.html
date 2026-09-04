@@ -155,9 +155,9 @@ table.dl th { background:#f4f6f8; }
 			<tr><td>Ocean salinity error</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.3/sal_error/" target="_blank">netcdf/v2.3/sal_error/</a></code> &#8212; 18 files, 149 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_sal_error/" target="_blank">monthly</a></td></tr>
 		</table>
 		<p class="ver-note">On NODD the settled and real-time records are joined
-		into one continuous 100-week series for each variable, so there is no separate real-time
-		download. Which weeks are provisional is recorded in the Icechunk store&#8217;s
-		<code>data_mode</code> flag.</p>
+		into one continuous series per variable, split into 100-week files, so
+		there is no separate real-time download. Which weeks are provisional is
+		recorded in the Icechunk store&#8217;s <code>data_mode</code> flag.</p>
 
 		<h3 class="ver" id="download-v22">RFROM V2.2 &#8212; previous</h3>
 		<table class="dl">
@@ -198,16 +198,8 @@ repo = ic.Repository.open(
 )
 ds = xr.open_zarr(repo.readonly_session("main").store, consolidated=False, chunks={})</code></pre>
 
-		<p class="note">Both halves need configuring: the store is read from the
-		bucket, and the data it points at is read from the netCDF files. That is
-		what the <code>authorize_virtual_chunk_access</code> line does &#8212;
-		without it you get metadata and no data. <code>ds</code> then holds
-		<code>ocean_temperature</code>, <code>ocean_salinity</code>,
-		<code>ocean_temperature_error</code>, <code>ocean_salinity_error</code>,
-		1993-01-01 to 2025-12-05 weekly, plus a <code>data_mode</code> flag
-		(0 = settled, 1 = provisional real-time). If reads feel slow, raise Zarr&#8217;s
-		default concurrency of 10: <code>import zarr;
-		zarr.config.set({"async.concurrency": 128})</code>.</p>
+		<p class="note">If reads feel slow, raise Zarr&#8217;s default concurrency
+		of 10: <code>import zarr; zarr.config.set({"async.concurrency": 128})</code>.</p>
 
 		<p><b>Python &#8212; a single netCDF file</b></p>
 <pre><code>import xarray as xr
