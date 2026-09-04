@@ -6,13 +6,13 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 ## Repo state
 
 - Repo: `nmfs-opensci/gobai-rfrom-icechunks`, working on `/home/jovyan/gobai-rfrom-icechunks`.
-- **Branch: `issue-17-rfromv-icechunk`** — 10 commits, pushed, clean, open as
-  **PR #24** ("Issue #17: virtual Icechunk store for RFROM v2.3", opened
-  2026-09-03, `Closes #17`). **Not merged, and not ready to merge** — the netCDF
-  reprocess it depends on is still running. This is the active work; see the
-  issue #17 entry below. **Open issues: #17
-  (in progress), #25 (`temp_error` labelled v2.2 — being fixed inside #17), #21**
-  (RFROM v2.2 Ocean Heat Content → NODD; not started).
+- Branch: `main`, clean. **PR #24** (`issue-17-rfromv-icechunk`, issue #17)
+  merged 2026-09-04; branch deleted, issues **#17 and #25 closed**. The RFROM
+  v2.3 virtual Icechunk store is **published and live** at
+  `gs://noaa-oar-rfrom/icechunk/v2.3` — see the issue #17 entry below.
+  **Open issues: #26** (GOBAI HR virtual Icechunk — the next task), **#21**
+  (RFROM v2.2 Ocean Heat Content → NODD, not started), **#23** (pandas warning,
+  cosmetic).
 - Earlier history: PR #22 (`issue-20-rfromv-v22-v21-nodd`, issue
   #20) merged 2026-09-03; branch deleted, issue #20 auto-closed. PR #19
   (`issue-15-cleanup-rfromv-notebooks`, issue #15) merged 2026-09-03; branch
@@ -53,8 +53,8 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 ## In progress / next
 
-- **RFROM v2.3 → virtual Icechunk** (issue #17, **IN PROGRESS**, branch
-  `issue-17-rfromv-icechunk`, no PR yet). Read
+- **RFROM v2.3 → virtual Icechunk** (issue #17, **DONE** — PR #24 merged
+  2026-09-04, branch deleted, issues #17 and #25 closed). Read
   **`claude/notes/rfromv-icechunk.md`** first — it is the full design record and
   every number in it is measured.
 
@@ -101,7 +101,12 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   Re-validated after deletion: 16/16 endpoint samples match and an anonymous
   read still works across the old stable/realtime seam.
 
-  **Next:** merge PR #24. GOBAI HR is issue #26.
+  **Issue #25 closed with it:** all 18 `temp_error` blocks now carry
+  `title = "RFROM v2.3"` and the full citation, one unique value each across the
+  stream. The upstream cause is unchanged — ERDDAP still serves the stale title —
+  so the `global_attrs` override in `nodd.py` must stay for any future reprocess.
+
+  **Next:** GOBAI HR is issue #26.
 
   **Also settled this session — the numcodecs warning.** The store's arrays carry
   `numcodecs.shuffle` + `numcodecs.zlib`, Zarr v3 *extension* codecs rather than
