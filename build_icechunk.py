@@ -548,6 +548,12 @@ def build(store_name, local_repo=None, validate_after=True, workers=8):
 
     if validate_after:
         print("\nValidating from the consumer read path")
+        # Reopen rather than reusing the writer's repository object. On object
+        # storage the writer's branch pointer can still resolve to the initial
+        # empty snapshot right after a commit, and validation then fails with
+        # GroupNotFoundError against a store that is actually fine. Reopening is
+        # also what "validate from the consumer read path" is supposed to mean.
+        repo = open_repo(cfg, local_repo=local_repo, create=False)
         if not validate(repo, cfg):
             return 1
     print(f"\nDone. {where}")

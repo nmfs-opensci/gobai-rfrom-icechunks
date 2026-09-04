@@ -1,9 +1,10 @@
 # RFROM v2.3 → Icechunk (issue #17) — design record
 
-Status: **design settled and verified end-to-end; the netCDF restructure is
-almost complete, and the first full rehearsal build fails on one remaining
-block** — see §6.1. Produced with the `virtual-icechunk` skill. Every number
-below was measured against the published files on 2026-09-03/04, not assumed.
+Status: **done — the store is published at `gs://noaa-oar-rfrom/icechunk/v2.3`
+and verified anonymously** (§6.2). The netCDF restructure is complete; the
+rehearsal failure recorded in §6.1 is resolved. Produced with the
+`virtual-icechunk` skill. Every number below was measured against the published
+files on 2026-09-03/04, not assumed.
 
 ## 1. The two configurations
 
@@ -169,6 +170,35 @@ deliberately rather than by accident:
 
 Downloads are resumable (complete monthly files are skipped, the `.part` file
 restarts), so the re-run does not repeat the 12 GB already fetched for block 3.
+
+### 6.2 Real build published, 2026-09-04
+
+`python build_icechunk.py --store rfrom_v23` → **`gs://noaa-oar-rfrom/icechunk/v2.3`**,
+snapshot `ERWNPYN2CDCJ5SGHHBBG`. All four streams concatenated cleanly once
+`temp_error` was rebuilt (259 / 279 / 298 / 271 s of header parsing). The store is
+**20 objects, 2.38 MB**, referencing 526.6 GB of netCDFs — nothing copied.
+
+```
+chunks 3 · manifests 10 (1.95 MB) · overwritten 2 · repo 1 · snapshots 2 · transactions 2 (0.41 MB)
+```
+
+Verified **anonymously**, with the exact recipe in `RFROMV/README.md` and no
+credentials: opens, reports 1719 × 58 × 720 × 1440, `data_mode` 1670 stable /
+49 realtime, and real data reads back through the virtual byte-range references
+(first-step and last-step samples). `--validate` from a fresh process checks both
+endpoints of the first and last source file of all four variables: 16/16 match.
+
+**Bug found and fixed by this build.** The in-build validation failed with
+`GroupNotFoundError` even though the commit had succeeded, because `build()`
+passed the *writer's* repository object to `validate()`. On object storage that
+object's branch pointer still resolved to the initial empty snapshot
+(`1CECHNKREP0F1RSTCMT0`, `branch: None`) immediately after the commit; on a local
+filesystem it did not, which is why every rehearsal passed. `build()` now reopens
+the repository with `create=False` before validating — which is what "validate
+from the consumer read path" was always supposed to mean. The published store was
+never affected: it was correct all along, and re-validating from a fresh process
+proved it.
+
 
 ## 7. Read performance
 

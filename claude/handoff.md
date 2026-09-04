@@ -74,22 +74,23 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   `unlimited_dims`; `RFROMV/migrate_v23.py` did the server-side bucket copy of the
   32 unchanged blocks (~200 GB of ERDDAP traffic saved).
 
-  **State as of 2026-09-04.** The restructure is ~95 % done: `temp`, `sal` and
-  `sal_error` are correct and verified in the bucket. **One block blocks
-  everything: `temp_error` block 17 still has a shrunk time chunk (19, not 100).**
-  The first full rehearsal build got through temp and sal and then failed on it,
-  by name, exactly as `concat_virtual`'s guard was designed to. Same stream also
-  has blocks 3-16 still carrying the issue #25 v2.2 title while 0-2 carry the
-  corrected v2.3 one, because a `--force` re-run **died at 02:13 on 2026-09-04**
-  partway through block 3, leaving 12 GB of scratch at
-  `/home/jovyan/shared-public/rfromv-scratch/erddap/`. No cause was captured.
+  **DONE as of 2026-09-04. The store is published at
+  `gs://noaa-oar-rfrom/icechunk/v2.3`** (snapshot `ERWNPYN2CDCJ5SGHHBBG`,
+  20 objects, 2.38 MB, referencing 526.6 GB). All 18 `temp_error` blocks were
+  rebuilt across several VMs, which fixed both the shrunk tail chunk and the
+  issue #25 v2.2 titles. Verified **anonymously** with the README recipe — opens,
+  `data_mode` 1670 stable / 49 realtime, and real data reads back through the
+  virtual references. `--validate` checks 16 endpoint samples across all four
+  variables: all match.
 
-  **Next action** (Eli's call — ~6.5 hours, and it rewrites published files):
+  **A bug the real build found:** `build()` validated using the *writer's*
+  repository object, whose branch pointer on object storage still resolved to the
+  initial empty snapshot right after the commit — so validation raised
+  `GroupNotFoundError` against a store that was fine. Local rehearsals never hit
+  it. Fixed by reopening with `create=False` before validating. Detail in §6.2.
 
-      python nodd.py --stream temp_error --blocks 3-17 --force
-
-  Then re-run the rehearsal, then the real build, then retire the old
-  `*_stable`/`*_realtime` prefixes (225.5 GB). Detail in §6.1 of the note.
+  **Next:** retire the old `*_stable`/`*_realtime` prefixes (225.5 GB) once Eli
+  is satisfied, and merge PR #24. GOBAI HR is issue #26.
 
   **Also settled this session — the numcodecs warning.** The store's arrays carry
   `numcodecs.shuffle` + `numcodecs.zlib`, Zarr v3 *extension* codecs rather than
