@@ -6,8 +6,11 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 ## Repo state
 
 - Repo: `nmfs-opensci/gobai-rfrom-icechunks`, working on `/home/jovyan/gobai-rfrom-icechunks`.
-- **Branch: `issue-17-rfromv-icechunk`** — 9 commits, pushed, clean, **no PR yet**.
-  This is the active work; see the issue #17 entry below. **Open issues: #17
+- **Branch: `issue-17-rfromv-icechunk`** — 10 commits, pushed, clean, open as
+  **PR #24** ("Issue #17: virtual Icechunk store for RFROM v2.3", opened
+  2026-09-03, `Closes #17`). **Not merged, and not ready to merge** — the netCDF
+  reprocess it depends on is still running. This is the active work; see the
+  issue #17 entry below. **Open issues: #17
   (in progress), #25 (`temp_error` labelled v2.2 — being fixed inside #17), #21**
   (RFROM v2.2 Ocean Heat Content → NODD; not started).
 - Earlier history: PR #22 (`issue-20-rfromv-v22-v21-nodd`, issue
