@@ -138,53 +138,43 @@ table.dl th { background:#f4f6f8; }
 		cloud-optimised blocks in the public bucket
 		<code>gs://noaa-oar-rfrom</code> &#8212; open data, no account or
 		credentials.</p>
-		<p class="note">Browse the bucket in the
-		<b>Google Cloud console</b> using the links below. The bucket is public,
-		so no project and no permissions are needed &#8212; but the console does
-		require you to be signed in to some Google account. With no account at
-		all, use the <b>XML listing</b> link beside it, or the code in
-		<a href="#code">Data Access (Code)</a>. Individual files are plain HTTPS
-		downloads either way.</p>
+		<p class="note">Each bucket path below links to the
+		<b>Google Cloud console</b>, where you can browse and download individual
+		files. The bucket is public, so no project and no permissions are needed
+		&#8212; but the console does require you to be signed in to some Google
+		account. With no account at all, list the files with the code in
+		<a href="#code">Data Access (Code)</a>, or over plain HTTPS at
+		<code>https://storage.googleapis.com/noaa-oar-rfrom?prefix=netcdf/v2.3/&amp;delimiter=/</code>.</p>
 
 		<h3 class="ver" id="download-v23">RFROM V2.3 &#8212; current</h3>
 		<table class="dl">
 			<tr><th>Field</th><th>NODD (72 files, 527 GB)</th><th>ERDDAP source files</th></tr>
-			<tr><td>Ocean temperature</td><td><code>netcdf/v2.3/temp/</code> &#8212; 18 files, 130 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_temp/" target="_blank">monthly</a></td></tr>
-			<tr><td>Ocean salinity</td><td><code>netcdf/v2.3/sal/</code> &#8212; 18 files, 95 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_sal/" target="_blank">monthly</a></td></tr>
-			<tr><td>Ocean temperature error</td><td><code>netcdf/v2.3/temp_error/</code> &#8212; 18 files, 152 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_temp_error/" target="_blank">monthly</a></td></tr>
-			<tr><td>Ocean salinity error</td><td><code>netcdf/v2.3/sal_error/</code> &#8212; 18 files, 149 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_sal_error/" target="_blank">monthly</a></td></tr>
+			<tr><td>Ocean temperature</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.3/temp/" target="_blank">netcdf/v2.3/temp/</a></code> &#8212; 18 files, 130 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_temp/" target="_blank">monthly</a></td></tr>
+			<tr><td>Ocean salinity</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.3/sal/" target="_blank">netcdf/v2.3/sal/</a></code> &#8212; 18 files, 95 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_sal/" target="_blank">monthly</a></td></tr>
+			<tr><td>Ocean temperature error</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.3/temp_error/" target="_blank">netcdf/v2.3/temp_error/</a></code> &#8212; 18 files, 152 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_temp_error/" target="_blank">monthly</a></td></tr>
+			<tr><td>Ocean salinity error</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.3/sal_error/" target="_blank">netcdf/v2.3/sal_error/</a></code> &#8212; 18 files, 149 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_sal_error/" target="_blank">monthly</a></td></tr>
 		</table>
 		<p class="ver-note">On NODD the settled and real-time records are joined
-		into one continuous series per field, so there is no separate real-time
+		into one continuous 100-week series for each variable, so there is no separate real-time
 		download. Which weeks are provisional is recorded in the Icechunk store&#8217;s
-		<code>data_mode</code> flag. Example file, direct download (7.5 GB):<br>
-		<code><a href="https://storage.googleapis.com/noaa-oar-rfrom/netcdf/v2.3/temp/RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc">https://storage.googleapis.com/noaa-oar-rfrom/netcdf/v2.3/temp/RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc</a></code><br>
-		<a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.3/" target="_blank">Browse V2.3 in the Cloud console</a> &#183; <a href="https://storage.googleapis.com/noaa-oar-rfrom?prefix=netcdf/v2.3/&amp;delimiter=/" target="_blank">XML listing</a> (no sign-in)</p>
+		<code>data_mode</code> flag.</p>
 
 		<h3 class="ver" id="download-v22">RFROM V2.2 &#8212; previous</h3>
 		<table class="dl">
 			<tr><th>Field</th><th>NODD</th><th>ERDDAP source files</th></tr>
-			<tr><td>Ocean temperature</td><td><code>netcdf/v2.2/temp_v22/</code> &#8212; 17 files, 134 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv22_temp/" target="_blank">monthly</a></td></tr>
-			<tr><td>Ocean salinity</td><td><code>netcdf/v2.2/sal_v22/</code> &#8212; 18 files, 99 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv22_sal/" target="_blank">monthly</a></td></tr>
+			<tr><td>Ocean temperature</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.2/temp_v22/" target="_blank">netcdf/v2.2/temp_v22/</a></code> &#8212; 17 files, 134 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv22_temp/" target="_blank">monthly</a></td></tr>
+			<tr><td>Ocean salinity</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.2/sal_v22/" target="_blank">netcdf/v2.2/sal_v22/</a></code> &#8212; 18 files, 99 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv22_sal/" target="_blank">monthly</a></td></tr>
 			<tr><td>Ocean heat content</td><td>not on NODD</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv22/" target="_blank">monthly</a></td></tr>
 		</table>
-		<p class="ver-note"><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.2/" target="_blank">Browse V2.2 in the Cloud console</a> &#183; <a href="https://storage.googleapis.com/noaa-oar-rfrom?prefix=netcdf/v2.2/&amp;delimiter=/" target="_blank">XML listing</a> (no sign-in)</p>
 
 		<h3 class="ver" id="download-v21">RFROM V2.1 &#8212; legacy</h3>
 		<table class="dl">
 			<tr><th>Field</th><th>NODD</th><th>ERDDAP source files</th></tr>
-			<tr><td>Ocean temperature</td><td><code>netcdf/v2.1/temp_v21/</code> &#8212; 17 files, 129 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv21_temp/" target="_blank">monthly</a></td></tr>
+			<tr><td>Ocean temperature</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.1/temp_v21/" target="_blank">netcdf/v2.1/temp_v21/</a></code> &#8212; 17 files, 129 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv21_temp/" target="_blank">monthly</a></td></tr>
 		</table>
-		<p class="ver-note"><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.1/" target="_blank">Browse V2.1 in the Cloud console</a> &#183; <a href="https://storage.googleapis.com/noaa-oar-rfrom?prefix=netcdf/v2.1/&amp;delimiter=/" target="_blank">XML listing</a> (no sign-in)</p>
 
 		<h2 class="sec" id="code">Data Access &#8212; Code</h2>
 		<div class="cloud">
-		<p>Everything here reads the public NODD bucket
-		<code>gs://noaa-oar-rfrom</code> anonymously: no account, no credentials,
-		no quota. There are two routes in, and they return identical values
-		because the Icechunk store holds no copy of the data &#8212; it is metadata
-		pointing into the same netCDF files.</p>
-
 		<table>
 			<tr><th>What</th><th>Where</th><th>Use it for</th></tr>
 			<tr><td>Icechunk store</td><td><code>gs://noaa-oar-rfrom/icechunk/v2.3</code></td>
