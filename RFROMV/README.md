@@ -274,13 +274,7 @@ pip install -r ../requirements.txt -r ../requirements-icechunk.txt
   object matches its source by CRC32C, before the old prefixes are deleted. Takes
   its block plan straight from `nodd.py`, so the two cannot drift. Can be deleted
   once the migration is done.
-- **`index.html`** — landing page for the published product, and the source of
-  `gs://noaa-oar-rfrom/index.html`. Carries the cloud-access instructions:
-  `pip install` lines, opening the Icechunk store, opening a single netCDF with
-  xarray, and reading the netCDFs from R. Upload with
-  `gcsfs.GCSFileSystem(token=...).put("RFROMV/index.html", "noaa-oar-rfrom/index.html")`.
-  Every code block on the page was executed verbatim before publishing — keep it
-  that way.
+- **`index.html`** — landing page for the published product.
 - **`../requirements.txt`** — pip dependencies for running `nodd.py` off-hub.
   Only needed off-hub; see "Running off-hub" below.
 
