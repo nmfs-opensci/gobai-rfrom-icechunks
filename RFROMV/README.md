@@ -388,6 +388,13 @@ the store is Python-only.
   `gcsfs.GCSFileSystem(token=...).put("RFROMV/index.html", "noaa-oar-rfrom/index.html")`.
   Every code block on the page was executed verbatim before publishing — keep it
   that way.
+
+  **Verifying an upload:** GCS serves this object with
+  `cache-control: public, max-age=3600`, so a plain fetch can return a stale copy
+  for up to an hour after you replace it. Confirm with a cache-buster —
+  `curl -s "https://storage.googleapis.com/noaa-oar-rfrom/index.html?cb=$RANDOM"`
+  — or you will think the upload failed when it did not. Viewers see the old
+  page for the same hour.
 - **`../requirements.txt`** — pip dependencies for running `nodd.py` off-hub.
   Only needed off-hub; see "Running off-hub" below.
 
