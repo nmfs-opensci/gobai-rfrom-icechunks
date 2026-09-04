@@ -21,6 +21,12 @@ ERDDAP monthly netCDFs
 The 1670-step stable record splits into 17 blocks; output files are named e.g.
 `RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc`.
 
+**For consumers**, the public landing page is
+<https://storage.googleapis.com/noaa-oar-rfrom/index.html> — it carries the
+copy-paste instructions for opening the data from Python and R. This README is
+the producer-side view; ["Reading the published data"](#reading-the-published-data)
+below mirrors what the page says.
+
 ## The product streams (RFROM v2.3)
 
 These are the current **v2.3** products, published under `netcdf/v2.3/` in the
@@ -207,20 +213,19 @@ chunk). Zarr has no variable-length chunks, so a store cannot paper over either.
 ### Reading the store
 
 ```python
-import icechunk as ic, xarray as xr, zarr
+import icechunk as ic, xarray as xr
 
-zarr.config.set({"async.concurrency": 128})   # the default of 10 is why a store "feels slow"
-
-storage = ic.gcs_storage(bucket="noaa-oar-rfrom", prefix="icechunk/v2.3", anonymous=True)
-prefix = "gs://noaa-oar-rfrom/netcdf/v2.3/"
+SRC = "gs://noaa-oar-rfrom/netcdf/v2.3/"
 repo = ic.Repository.open(
-    storage,
-    authorize_virtual_chunk_access=ic.containers_credentials(
-        {prefix: ic.gcs_credentials(anonymous=True)}
-    ),
+    ic.gcs_storage(bucket="noaa-oar-rfrom", prefix="icechunk/v2.3", anonymous=True),
+    authorize_virtual_chunk_access=ic.containers_credentials({SRC: ic.gcs_credentials(anonymous=True)}),
 )
 ds = xr.open_zarr(repo.readonly_session("main").store, consolidated=False, chunks={})
 ```
+
+Byte-for-byte the snippet on the landing page. If reads feel slow, raise Zarr's
+default concurrency of 10 — for readers and writers alike:
+`import zarr; zarr.config.set({"async.concurrency": 128})`.
 
 The store and the netCDFs it references are **two independent credential
 settings**, even though both live in the same public bucket. A reader that
@@ -239,13 +244,114 @@ open — it is expected, and there is nothing to fix in the store. Background an
 the fallback plan are in §8 of
 [`../claude/notes/rfromv-icechunk.md`](../claude/notes/rfromv-icechunk.md).
 
-Reading and building need `icechunk` and `virtualizarr`, which are **not** in
-[`../requirements.txt`](../requirements.txt) — that file covers `nodd.py` only.
-They live in [`../requirements-icechunk.txt`](../requirements-icechunk.txt):
+**Reading needs `icechunk`, `zarr` and `xarray` — not `virtualizarr`.**
+VirtualiZarr is a *build*-time dependency: it parses the HDF5 headers into chunk
+manifests. Nothing at read time goes near it, so do not put it in a consumer's
+install line.
+
+```sh
+pip install icechunk zarr xarray          # to read the store
+```
+
+To *build* a store you need the full set, which is **not** in
+[`../requirements.txt`](../requirements.txt) — that file covers `nodd.py` only:
 
 ```sh
 pip install -r ../requirements.txt -r ../requirements-icechunk.txt
 ```
+
+## Reading the published data
+
+Everything below is anonymous — the bucket is open data, so no account, no
+credentials, no quota. This mirrors the public landing page,
+[`index.html`](index.html), served at
+<https://storage.googleapis.com/noaa-oar-rfrom/index.html>. **Keep the two in
+step**: if you change the code here, change it there and re-upload.
+
+There are two routes in, returning identical values because the store holds no
+copy of the data:
+
+| | Where | For |
+|---|---|---|
+| Icechunk store | `gs://noaa-oar-rfrom/icechunk/v2.3` | the whole 1719-week record as one dataset — Python only |
+| netCDF files | `gs://noaa-oar-rfrom/netcdf/v2.3/` | ordinary netCDF-4, 18 files per variable, any language |
+
+For the store, see ["Reading the store"](#reading-the-store) above.
+
+### Reading the netCDFs directly
+
+```sh
+pip install xarray gcsfs h5netcdf
+```
+
+```python
+import xarray as xr
+
+url = "gs://noaa-oar-rfrom/netcdf/v2.3/temp/RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc"
+ds = xr.open_dataset(url, engine="h5netcdf", storage_options={"token": "anon"}, chunks={})
+```
+
+To browse the bucket by eye, use the Google Cloud console — the bucket is
+public, so no project or permissions are needed, but the console does require a
+Google sign-in:
+<https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.3/>
+
+With no account at all, the XML listing works anonymously
+(`https://storage.googleapis.com/noaa-oar-rfrom?prefix=netcdf/v2.3/&delimiter=/`),
+and so does this:
+
+```python
+import gcsfs
+gcsfs.GCSFileSystem(token="anon").ls("noaa-oar-rfrom/netcdf/v2.3/temp")
+```
+
+Note that `https://storage.googleapis.com/noaa-oar-rfrom/netcdf/v2.3/temp/` —
+the plain prefix path — returns 404. That is not a permissions problem; that
+endpoint just does not do directory listings.
+
+Note that **file names sort lexically, not chronologically** (`REALTIME` sorts
+before `STABLE` — see ["File names"](#file-names)), so an `open_mfdataset` over a
+naive glob will not be in time order. Use the Icechunk store if you want the
+record in time order without thinking about it, or sort on the dates in the name
+the way `build_icechunk.block_start` does.
+
+### Reading from R
+
+R can read these files **without downloading them**. Appending `#mode=bytes` to
+the HTTPS URL makes netCDF fetch only the byte ranges it needs — verified on the
+hub against a 7.5 GB file: `nc_open` in 4.3 s, a 4×4 slice in 0.9 s.
+
+```r
+install.packages("ncdf4")
+library(ncdf4)
+
+u <- paste0("https://storage.googleapis.com/noaa-oar-rfrom/netcdf/v2.3/temp/",
+            "RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc#mode=bytes")
+nc <- nc_open(u)
+x  <- ncvar_get(nc, "ocean_temperature", start = c(600, 300, 1, 1), count = c(4, 4, 1, 1))
+nc_close(nc)
+```
+
+Two things that bite:
+
+- **Dimension order is reversed** relative to Python:
+  `(longitude, latitude, mean_pressure, time)`. Getting this wrong returns data
+  rather than an error, so it fails silently.
+- **Byte-range is a netCDF-C build option** (`--enable-byterange`). Most builds
+  have it; if yours does not, `nc_open` fails with an unknown-file-format or
+  inaccessible-DAP message and the file must be downloaded first:
+
+```r
+u <- paste0("https://storage.googleapis.com/noaa-oar-rfrom/netcdf/v2.3/temp/",
+            "RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc")
+download.file(u, "rfrom.nc", mode = "wb")   # ~7.5 GB
+nc <- nc_open("rfrom.nc")
+```
+
+  Files run 2.7–9.2 GB each, so avoid this where you can.
+
+`RNetCDF::open.nc()` streams the same way. There is no Icechunk reader for R, so
+the store is Python-only.
 
 ## Files in this directory
 
@@ -274,7 +380,21 @@ pip install -r ../requirements.txt -r ../requirements-icechunk.txt
   object matches its source by CRC32C, before the old prefixes are deleted. Takes
   its block plan straight from `nodd.py`, so the two cannot drift. Can be deleted
   once the migration is done.
-- **`index.html`** — landing page for the published product.
+- **`index.html`** — landing page for the published product, and the source of
+  `gs://noaa-oar-rfrom/index.html`, live at
+  <https://storage.googleapis.com/noaa-oar-rfrom/index.html>. Carries the cloud-access instructions:
+  `pip install` lines, opening the Icechunk store, opening a single netCDF with
+  xarray, and reading the netCDFs from R. Upload with
+  `gcsfs.GCSFileSystem(token=...).put("RFROMV/index.html", "noaa-oar-rfrom/index.html")`.
+  Every code block on the page was executed verbatim before publishing — keep it
+  that way.
+
+  **Verifying an upload:** GCS serves this object with
+  `cache-control: public, max-age=3600`, so a plain fetch can return a stale copy
+  for up to an hour after you replace it. Confirm with a cache-buster —
+  `curl -s "https://storage.googleapis.com/noaa-oar-rfrom/index.html?cb=$RANDOM"`
+  — or you will think the upload failed when it did not. Viewers see the old
+  page for the same hour.
 - **`../requirements.txt`** — pip dependencies for running `nodd.py` off-hub.
   Only needed off-hub; see "Running off-hub" below.
 
