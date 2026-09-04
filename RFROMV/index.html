@@ -7,6 +7,42 @@
 
 <link rel="icon" type="image/png" href="https://www.pmel.noaa.gov/gobai/favicon-32.png">
 <link href="https://www.pmel.noaa.gov/gobai/gobai.css" rel="stylesheet" type="text/css">
+<style>
+/* --- added for navigation and data-access sections.
+       Colours are gobai.css's own: #004F98 link blue, #41B7C5 hover teal. --- */
+.rf-nav {
+	display:flex; flex-wrap:wrap; justify-content:center; gap:.4em 1.6em;
+	background:#004F98; padding:.7em 1.1em; border-radius:3px;
+	/* margin-bottom only, as a longhand: gobai.css centres nav with
+	   "margin: 0 auto" at >=960px and uses "margin: 15px" below that.
+	   The shorthand would clobber both. */
+	margin-bottom:1.4em;
+	text-align:center;
+}
+/* Must out-specify "nav a:link" in gobai.css (0,1,2), or its blue wins here. */
+.rf-nav a, .rf-nav a:link, .rf-nav a:visited {
+	color:#fff; text-decoration:none; font-weight:600; font-size:1em;
+	margin-right:0;   /* gobai.css adds 20px; gap handles spacing instead */
+}
+/* Hover keeps white + underline: gobai.css's #41B7C5 teal is only 3.42:1 on
+   this blue, which fails WCAG AA for normal text. White is 8.17:1. */
+.rf-nav a:hover, .rf-nav a:focus { color:#fff; text-decoration:underline; }
+
+h2.sec { border-bottom:2px solid #004F98; padding-bottom:.2em; margin-top:2.2em; }
+h3.ver { border-left:5px solid #004F98; background:#eef3f7; padding:.4em .7em;
+         margin:1.7em 0 .3em; font-size:1.05em; }
+.ver-note { font-size:.9em; color:#555; margin:.2em 0 .7em; }
+table.dl { border-collapse:collapse; margin:.5em 0 1em; font-size:.93em; }
+table.dl th, table.dl td { border:1px solid #d7dde3; padding:.35em .75em; text-align:left; }
+table.dl th { background:#f4f6f8; }
+.cloud pre { background:#f4f6f8; border:1px solid #d7dde3; border-left:3px solid #004F98;
+             padding:.75em 1em; overflow-x:auto; font-size:.88em; line-height:1.45; }
+.cloud code, code { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.cloud table { border-collapse:collapse; margin:1em 0; font-size:.92em; }
+.cloud th, .cloud td { border:1px solid #d7dde3; padding:.35em .7em; text-align:left; }
+.cloud th { background:#f4f6f8; }
+.cloud .note, .note { font-size:.92em; color:#444; }
+</style>
 </head>
 
 <body>
@@ -17,10 +53,15 @@
 		<h1 class="site-name">RFROM: Random Forest Regression Ocean Maps</h1>
 	</div>
 </header>
-<!--<nav><a href="../index.html">Home</a></nav>-->
+<nav class="rf-nav" aria-label="Section navigation">
+	<a href="#about">About</a>
+	<a href="#erddap">Data Access (ERDDAP)</a>
+	<a href="#download">Data Access (Download)</a>
+	<a href="#code">Data Access (Code)</a>
+</nav>
 <main>
 	<div id="main-content"> <!-- InstanceBeginEditable name="MainContent" -->
-		<h2>About RFROM</h2>
+		<h2 class="sec" id="about">About RFROM</h2>
 		<p><a href="mailto:john.lyman@noaa.gov">John M. Lyman</a> and <a href="mailto:gregory.c.johnson@noaa.gov">Gregory C. Johnson</a></p>
 		<p>RFROM is a collection of Random Forest Regression Ocean Maps. These maps are computed from random forests constructed in different ocean basins. The maps are trained on ocean profiles of temperature and salinity measurements from the surface to 2000 m. RFROM uses satellite sea surface height (SSH), satellite sea surface temperature (SST), time, latitude, and longitude as predictors for temperature maps and ocean heat content maps. It adds the temperature maps as an additional predictor for salinity maps. The results are near-global &#188;-degree x &#188;-degree x 7-day resolution maps of temperature and salinity on 58 different depth layers, along with ocean heat content anomaly on 10 different layers.</p>
 		<p>The temperature and salinity profile data come from the <a href="https://www.metoffice.gov.uk/hadobs/en4/download-en4-2-2.html" target="_blank">UK Met Office Hadley Centre (EN.4.2.2)</a> and the <a href="https://argo.ucsd.edu/" target="_blank">Argo Program</a>, SSH delayed-mode maps from the Copernicus Marine Environment Monitoring Service (<a href="https://doi.org/10.48670/moi-00148" target="_blank">SEALEVEL_GLO_PHY_L4_MY_008_047</a>) and SST maps from NOAA (<a href="https://psl.noaa.gov/data/gridded/data.noaa.oisst.v2.highres.html" target="_blank">OISST V2.1</a>). Real time maps use real time SSH (<a href="https://data.marine.copernicus.eu/product/SEALEVEL_GLO_PHY_L4_NRT_008_046/description" target="_blank">SEALEVEL_GLO_PHY_L4_NRT_008_046</a>) where delayed mode SSH is not available.</p>
@@ -46,28 +87,163 @@
 		<p>Feel free to use RFROM for any non-commercial purposes, but do so at your own risk, we cannot take any liability on the use of RFROM.</p>
 		<p><i>Acknowledging use:</i></p>
 		<p>Please cite Lyman and Johnson (2023) when using RFROM.</p>
-		<p><b>Links to RFROM V2.3 data</b></p>
-		<ul>
-			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_temp/" target="_blank">Ocean temperature</a></li>
-			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_temp_realtime/" target="_blank">Real time ocean temperature</a></li>
-			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_temp_error/" target="_blank">Ocean temperature error</a></li>
-			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_sal/" target="_blank">Ocean salinity</a></li>
-			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_sal_realtime/" target="_blank">Real time ocean salinity</a></li>
-			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_sal_error/" target="_blank">Ocean salinity error</a></li>
-		</ul>
-		<p><b>Links to RFROM V2.2 data</b></p>
-		<ul>
-			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv22/" target="_blank">Ocean heat content</a></li>
-			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv22_realtime/" target="_blank">Real time ocean heat content</a></li>
-			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv22_error/" target="_blank">Ocean heat content error</a></li>
-			<li><a href="https://www.pmel.noaa.gov/rfrom/data/curve_RFROM_0_2000_OHCA_2026.nc" target="_blank">0-2000 m global OHCA curve</a></li>
-			<li><a href="https://www.pmel.noaa.gov/rfrom/data/curve_RFROM_0_700_OHCA_2026.nc">0-700 m global OHCA curve</a></li>
-		</ul>
-		<p><b>Link to RFROM V2.1 data</b></p>
-		<ul>
-			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv21_temp/" target="_blank">Ocean temperature</a><br>
-			</li>
-		</ul>
+		<h2 class="sec" id="erddap">Data Access &#8212; ERDDAP</h2>
+		<p>ERDDAP&#8217;s griddap form lets you subset by time, pressure and
+		region in the browser and download just that subset, in netCDF, CSV or
+		several other formats. Start here if you want part of the data rather
+		than whole files.</p>
+
+		<h3 class="ver" id="erddap-v23">RFROM V2.3 &#8212; current</h3>
+		<p class="ver-note">Weekly &#188;&#176; temperature and salinity on 58 mean-pressure
+		levels, 1993 to present, with error fields. The real-time streams extend the
+		settled record forward and are reprocessed as they settle.</p>
+		<table class="dl">
+			<tr><th>Field</th><th>ERDDAP dataset</th></tr>
+			<tr><td>Ocean temperature</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_temp.html" target="_blank"><code>argo_rfromv23_temp</code></a></td></tr>
+			<tr><td>Ocean temperature, real time</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_temp_realtime.html" target="_blank"><code>argo_rfromv23_temp_realtime</code></a></td></tr>
+			<tr><td>Ocean temperature error</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_temp_error.html" target="_blank"><code>argo_rfromv23_temp_error</code></a></td></tr>
+			<tr><td>Ocean salinity</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_sal.html" target="_blank"><code>argo_rfromv23_sal</code></a></td></tr>
+			<tr><td>Ocean salinity, real time</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_sal_realtime.html" target="_blank"><code>argo_rfromv23_sal_realtime</code></a></td></tr>
+			<tr><td>Ocean salinity error</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv23_sal_error.html" target="_blank"><code>argo_rfromv23_sal_error</code></a></td></tr>
+		</table>
+
+		<h3 class="ver" id="erddap-v22">RFROM V2.2 &#8212; previous</h3>
+		<p class="ver-note">Adds ocean heat content anomaly, which V2.3 does not
+		carry. OHC is on a different vertical grid (10 depth layers) from the
+		temperature and salinity fields (58 pressure levels).</p>
+		<table class="dl">
+			<tr><th>Field</th><th>ERDDAP dataset</th></tr>
+			<tr><td>Ocean temperature</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv22_temp.html" target="_blank"><code>argo_rfromv22_temp</code></a></td></tr>
+			<tr><td>Ocean salinity</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv22_sal.html" target="_blank"><code>argo_rfromv22_sal</code></a></td></tr>
+			<tr><td>Ocean heat content</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv22.html" target="_blank"><code>argo_rfromv22</code></a></td></tr>
+			<tr><td>Ocean heat content, real time</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv22_realtime.html" target="_blank"><code>argo_rfromv22_realtime</code></a></td></tr>
+			<tr><td>Ocean heat content error</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv22_error.html" target="_blank"><code>argo_rfromv22_error</code></a></td></tr>
+		</table>
+		<p class="ver-note">Global OHCA curves, direct download:
+		<a href="https://www.pmel.noaa.gov/rfrom/data/curve_RFROM_0_2000_OHCA_2026.nc" target="_blank">0&#8211;2000 m</a> &#183;
+		<a href="https://www.pmel.noaa.gov/rfrom/data/curve_RFROM_0_700_OHCA_2026.nc" target="_blank">0&#8211;700 m</a></p>
+
+		<h3 class="ver" id="erddap-v21">RFROM V2.1 &#8212; legacy</h3>
+		<p class="ver-note">Temperature only. Superseded by V2.2 and V2.3; kept for
+		reproducing earlier work.</p>
+		<table class="dl">
+			<tr><th>Field</th><th>ERDDAP dataset</th></tr>
+			<tr><td>Ocean temperature</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/griddap/argo_rfromv21_temp.html" target="_blank"><code>argo_rfromv21_temp</code></a></td></tr>
+		</table>
+
+		<h2 class="sec" id="download">Data Access &#8212; Download</h2>
+		<p>Two places hold whole files. <b>ERDDAP</b> serves the monthly source
+		files through a browsable directory listing. <b>NOAA Open Data
+		Dissemination (NODD)</b> holds the same data repackaged into larger,
+		cloud-optimised blocks in the public bucket
+		<code>gs://noaa-oar-rfrom</code> &#8212; open data, no account or
+		credentials.</p>
+		<p class="note">Each bucket path below links to the
+		<b>Google Cloud console</b>, where you can browse and download individual
+		files. The bucket is public, so no project and no permissions are needed
+		&#8212; but the console does require you to be signed in to some Google
+		account. With no account at all, list the files with the code in
+		<a href="#code">Data Access (Code)</a>, or over plain HTTPS at
+		<code>https://storage.googleapis.com/noaa-oar-rfrom?prefix=netcdf/v2.3/&amp;delimiter=/</code>.</p>
+
+		<h3 class="ver" id="download-v23">RFROM V2.3 &#8212; current</h3>
+		<table class="dl">
+			<tr><th>Field</th><th>NODD (72 files, 527 GB)</th><th>ERDDAP source files</th></tr>
+			<tr><td>Ocean temperature</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.3/temp/" target="_blank">netcdf/v2.3/temp/</a></code> &#8212; 18 files, 130 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_temp/" target="_blank">monthly</a></td></tr>
+			<tr><td>Ocean salinity</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.3/sal/" target="_blank">netcdf/v2.3/sal/</a></code> &#8212; 18 files, 95 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_sal/" target="_blank">monthly</a></td></tr>
+			<tr><td>Ocean temperature error</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.3/temp_error/" target="_blank">netcdf/v2.3/temp_error/</a></code> &#8212; 18 files, 152 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_temp_error/" target="_blank">monthly</a></td></tr>
+			<tr><td>Ocean salinity error</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.3/sal_error/" target="_blank">netcdf/v2.3/sal_error/</a></code> &#8212; 18 files, 149 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_sal_error/" target="_blank">monthly</a></td></tr>
+		</table>
+		<p class="ver-note">On NODD the settled and real-time records are joined
+		into one continuous series per variable, split into 100-week files, so
+		there is no separate real-time download. Which weeks are provisional is
+		recorded in the Icechunk store&#8217;s <code>data_mode</code> flag.</p>
+
+		<h3 class="ver" id="download-v22">RFROM V2.2 &#8212; previous</h3>
+		<table class="dl">
+			<tr><th>Field</th><th>NODD</th><th>ERDDAP source files</th></tr>
+			<tr><td>Ocean temperature</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.2/temp_v22/" target="_blank">netcdf/v2.2/temp_v22/</a></code> &#8212; 17 files, 134 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv22_temp/" target="_blank">monthly</a></td></tr>
+			<tr><td>Ocean salinity</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.2/sal_v22/" target="_blank">netcdf/v2.2/sal_v22/</a></code> &#8212; 18 files, 99 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv22_sal/" target="_blank">monthly</a></td></tr>
+			<tr><td>Ocean heat content</td><td>not on NODD</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv22/" target="_blank">monthly</a></td></tr>
+		</table>
+
+		<h3 class="ver" id="download-v21">RFROM V2.1 &#8212; legacy</h3>
+		<table class="dl">
+			<tr><th>Field</th><th>NODD</th><th>ERDDAP source files</th></tr>
+			<tr><td>Ocean temperature</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.1/temp_v21/" target="_blank">netcdf/v2.1/temp_v21/</a></code> &#8212; 17 files, 129 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv21_temp/" target="_blank">monthly</a></td></tr>
+		</table>
+
+		<h2 class="sec" id="code">Data Access &#8212; Code</h2>
+		<div class="cloud">
+		<table>
+			<tr><th>What</th><th>Where</th><th>Use it for</th></tr>
+			<tr><td>Icechunk store</td><td><code>gs://noaa-oar-rfrom/icechunk/v2.3</code></td>
+				<td>The whole V2.3 record &#8212; all four fields on one 1719-week time axis, opened as a single dataset. Python only.</td></tr>
+			<tr><td>netCDF files</td><td><code>gs://noaa-oar-rfrom/netcdf/&lt;version&gt;/</code></td>
+				<td>Ordinary netCDF-4 files. Any language. Stream them or download them.</td></tr>
+		</table>
+		<p class="note">The Icechunk store currently covers V2.3 only.</p>
+
+		<p><b>Python &#8212; install</b></p>
+<pre><code>pip install xarray gcsfs h5netcdf     # netCDF files
+pip install icechunk zarr             # ...plus the Icechunk store</code></pre>
+
+		<p><b>Python &#8212; the whole V2.3 record, via Icechunk</b></p>
+<pre><code>import icechunk as ic, xarray as xr
+
+SRC = "gs://noaa-oar-rfrom/netcdf/v2.3/"
+repo = ic.Repository.open(
+    ic.gcs_storage(bucket="noaa-oar-rfrom", prefix="icechunk/v2.3", anonymous=True),
+    authorize_virtual_chunk_access=ic.containers_credentials({SRC: ic.gcs_credentials(anonymous=True)}),
+)
+ds = xr.open_zarr(repo.readonly_session("main").store, consolidated=False, chunks={})</code></pre>
+
+		<p class="note">If reads feel slow, raise Zarr&#8217;s default concurrency
+		of 10: <code>import zarr; zarr.config.set({"async.concurrency": 128})</code>.</p>
+
+		<p><b>Python &#8212; a single netCDF file</b></p>
+<pre><code>import xarray as xr
+
+url = "gs://noaa-oar-rfrom/netcdf/v2.3/temp/RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc"
+ds = xr.open_dataset(url, engine="h5netcdf", storage_options={"token": "anon"}, chunks={})</code></pre>
+
+		<p class="note">To see what is published:
+		<code>import gcsfs; gcsfs.GCSFileSystem(token="anon").ls("noaa-oar-rfrom/netcdf/v2.3/temp")</code>.
+		Note that file names sort lexically rather than chronologically, so use the
+		Icechunk store if you want the record in time order without thinking about
+		it.</p>
+
+		<p><b>R</b></p>
+		<p>R can read these files <i>without downloading them</i>. Append
+		<code>#mode=bytes</code> to the HTTPS URL and netCDF reads only the bytes
+		it needs.</p>
+<pre><code>install.packages("ncdf4")
+library(ncdf4)
+
+u &lt;- paste0("https://storage.googleapis.com/noaa-oar-rfrom/netcdf/v2.3/temp/",
+            "RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc#mode=bytes")
+nc &lt;- nc_open(u)
+
+# one horizontal slice: 4x4 points, first pressure level, first time step
+x &lt;- ncvar_get(nc, "ocean_temperature", start = c(600, 300, 1, 1), count = c(4, 4, 1, 1))
+nc_close(nc)</code></pre>
+
+		<p class="note">Dimensions are reversed relative to Python:
+		<code>(longitude, latitude, mean_pressure, time)</code>.
+		<code>RNetCDF::open.nc()</code> works the same way.</p>
+
+		<p>Streaming needs a netCDF library built with byte-range support. Most
+		are; to check yours, run the code above &#8212; if it fails with a message
+		about an unknown file format or an inaccessible DAP response, yours is
+		not, and you should download the file first:</p>
+<pre><code>u &lt;- paste0("https://storage.googleapis.com/noaa-oar-rfrom/netcdf/v2.3/temp/",
+            "RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc")
+download.file(u, "rfrom.nc", mode = "wb")   # ~7.5 GB
+nc &lt;- nc_open("rfrom.nc")</code></pre>
+
+		<p class="note">Files run from about 2.7 to 9.2 GB each, so downloading is
+		worth avoiding where you can.</p>
+		</div>
 		<!-- InstanceEndEditable --> </div>
 </main>
 <footer>
