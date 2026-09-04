@@ -291,12 +291,23 @@ url = "gs://noaa-oar-rfrom/netcdf/v2.3/temp/RFROMV23_TEMP_STABLE_1993-01-01_1994
 ds = xr.open_dataset(url, engine="h5netcdf", storage_options={"token": "anon"}, chunks={})
 ```
 
-To list what is published:
+To browse the bucket by eye, use the Google Cloud console — the bucket is
+public, so no project or permissions are needed, but the console does require a
+Google sign-in:
+<https://console.cloud.google.com/storage/browser/noaa-oar-rfrom/netcdf/v2.3/>
+
+With no account at all, the XML listing works anonymously
+(`https://storage.googleapis.com/noaa-oar-rfrom?prefix=netcdf/v2.3/&delimiter=/`),
+and so does this:
 
 ```python
 import gcsfs
 gcsfs.GCSFileSystem(token="anon").ls("noaa-oar-rfrom/netcdf/v2.3/temp")
 ```
+
+Note that `https://storage.googleapis.com/noaa-oar-rfrom/netcdf/v2.3/temp/` —
+the plain prefix path — returns 404. That is not a permissions problem; that
+endpoint just does not do directory listings.
 
 Note that **file names sort lexically, not chronologically** (`REALTIME` sorts
 before `STABLE` — see ["File names"](#file-names)), so an `open_mfdataset` over a
