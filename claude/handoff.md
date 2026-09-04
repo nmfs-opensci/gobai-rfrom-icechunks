@@ -89,8 +89,19 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   `GroupNotFoundError` against a store that was fine. Local rehearsals never hit
   it. Fixed by reopening with `create=False` before validating. Detail in §6.2.
 
-  **Next:** retire the old `*_stable`/`*_realtime` prefixes (225.5 GB) once Eli
-  is satisfied, and merge PR #24. GOBAI HR is issue #26.
+  **Old prefixes retired 2026-09-04.** `temp_stable`, `temp_realtime`,
+  `sal_stable`, `sal_realtime` deleted — 36 objects, 225.5 GB. The v2.3 tree is
+  now exactly the four published streams, 72 files, 526.6 GB. Checked before
+  deleting: the store referenced zero old-prefix objects; the new tree was
+  complete and CRC-verified; and because blocks 16-17 were *rebuilt* from ERDDAP
+  rather than copied, the old realtime files' values were compared against the
+  store at three dates each for temp and sal — all identical. Note
+  `softDeletePolicy.retentionDurationSeconds` is **0** on this bucket, so the
+  deletion was permanent; recovery would mean re-downloading from ERDDAP.
+  Re-validated after deletion: 16/16 endpoint samples match and an anonymous
+  read still works across the old stable/realtime seam.
+
+  **Next:** merge PR #24. GOBAI HR is issue #26.
 
   **Also settled this session — the numcodecs warning.** The store's arrays carry
   `numcodecs.shuffle` + `numcodecs.zlib`, Zarr v3 *extension* codecs rather than

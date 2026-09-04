@@ -200,6 +200,34 @@ never affected: it was correct all along, and re-validating from a fresh process
 proved it.
 
 
+### 6.3 Old prefixes retired, 2026-09-04
+
+`temp_stable` (17), `temp_realtime` (1), `sal_stable` (17), `sal_realtime` (1) —
+36 objects, 225.5 GB — deleted. `netcdf/v2.3/` is now exactly the four published
+streams: 72 files, 526.6 GB.
+
+The bucket has `softDeletePolicy.retentionDurationSeconds: 0` and no versioning,
+so this was permanent. Four checks first, in order of how much they proved:
+
+1. The store references **zero** old-prefix objects — `list_stream_files` over
+   the four new streams returns 72 URLs, none under an old prefix.
+2. `migrate_v23.py --check`: new tree complete, the 32 copied blocks CRC-verified
+   against their sources.
+3. Coverage: old temp spanned 1993-01-01 → 2025-12-05 across stable+realtime;
+   new `temp/` spans the same, so nothing fell outside.
+4. **The one that mattered.** Blocks 16 and 17 were rebuilt from ERDDAP, not
+   copied, so they are not byte-identical to anything old. The old
+   `*_realtime` files' values were compared against the published store at three
+   dates each (first / middle / last) for both temp and sal — all identical. That
+   is the only evidence that the rebuilt seam and tail actually carry the old
+   realtime science data.
+
+Deletion was by explicit 36-object manifest with a re-assertion immediately
+before the call, not a recursive prefix wipe. Re-validated afterwards: 16/16
+endpoint samples match, and an anonymous read returns values on both sides of the
+old stable/realtime seam (2024-12-27 and 2025-01-03).
+
+
 ## 7. Read performance
 
 - **Metadata**: ~134 k chunk references (18 × 58 × 4 × 8 per variable × 4). Small
