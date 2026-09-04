@@ -7,6 +7,15 @@
 
 <link rel="icon" type="image/png" href="https://www.pmel.noaa.gov/gobai/favicon-32.png">
 <link href="https://www.pmel.noaa.gov/gobai/gobai.css" rel="stylesheet" type="text/css">
+<style>
+.cloud pre { background:#f4f6f8; border:1px solid #d7dde3; border-left:3px solid #0b5c8a;
+             padding:.75em 1em; overflow-x:auto; font-size:.88em; line-height:1.45; }
+.cloud code { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.cloud table { border-collapse:collapse; margin:1em 0; font-size:.92em; }
+.cloud th, .cloud td { border:1px solid #d7dde3; padding:.35em .7em; text-align:left; }
+.cloud th { background:#f4f6f8; }
+.cloud .note { font-size:.92em; color:#444; }
+</style>
 </head>
 
 <body>
@@ -55,6 +64,94 @@
 			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_sal_realtime/" target="_blank">Real time ocean salinity</a></li>
 			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv23_sal_error/" target="_blank">Ocean salinity error</a></li>
 		</ul>
+		<div class="cloud">
+		<p><b>RFROM V2.3 in the cloud (NOAA Open Data Dissemination)</b></p>
+		<p>V2.3 is published in the public Google Cloud Storage bucket
+		<code>gs://noaa-oar-rfrom</code>. It is open data: no account, no
+		credentials, no request quota. There are two ways in.</p>
+
+		<table>
+			<tr><th>What</th><th>Where</th><th>Use it for</th></tr>
+			<tr><td>Icechunk store</td><td><code>gs://noaa-oar-rfrom/icechunk/v2.3</code></td>
+				<td>The whole record &#8212; all four variables on one 1719-week time axis, opened as a single dataset. Python only.</td></tr>
+			<tr><td>netCDF files</td><td><code>gs://noaa-oar-rfrom/netcdf/v2.3/</code></td>
+				<td>Ordinary netCDF-4 files, 18 per variable. Any language. Stream them or download them.</td></tr>
+		</table>
+
+		<p class="note">The Icechunk store holds no copy of the data &#8212; it is
+		metadata pointing into the same netCDF files, so both routes return
+		identical values.</p>
+
+		<p><b>Python &#8212; install</b></p>
+<pre><code>pip install xarray gcsfs h5netcdf     # netCDF files
+pip install icechunk zarr             # ...plus the Icechunk store</code></pre>
+
+		<p><b>Python &#8212; the whole dataset, via Icechunk</b></p>
+<pre><code>import icechunk as ic, xarray as xr
+
+SRC = "gs://noaa-oar-rfrom/netcdf/v2.3/"
+repo = ic.Repository.open(
+    ic.gcs_storage(bucket="noaa-oar-rfrom", prefix="icechunk/v2.3", anonymous=True),
+    authorize_virtual_chunk_access=ic.containers_credentials({SRC: ic.gcs_credentials(anonymous=True)}),
+)
+ds = xr.open_zarr(repo.readonly_session("main").store, consolidated=False, chunks={})</code></pre>
+
+		<p class="note">Both halves need configuring: the store is read from the
+		bucket, and the data it points at is read from the netCDF files. That is
+		what the <code>authorize_virtual_chunk_access</code> line does &#8212;
+		without it you get metadata and no data. <code>ds</code> then holds
+		<code>ocean_temperature</code>, <code>ocean_salinity</code>,
+		<code>ocean_temperature_error</code>, <code>ocean_salinity_error</code>,
+		1993-01-01 to 2025-12-05 weekly, plus a <code>data_mode</code> flag
+		(0 = settled, 1 = provisional real-time). If reads feel slow, raise Zarr's
+		default concurrency of 10: <code>import zarr;
+		zarr.config.set({"async.concurrency": 128})</code>.</p>
+
+		<p><b>Python &#8212; a single netCDF file</b></p>
+<pre><code>import xarray as xr
+
+url = "gs://noaa-oar-rfrom/netcdf/v2.3/temp/RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc"
+ds = xr.open_dataset(url, engine="h5netcdf", storage_options={"token": "anon"}, chunks={})</code></pre>
+
+		<p class="note">To see what is published:
+		<code>import gcsfs; gcsfs.GCSFileSystem(token="anon").ls("noaa-oar-rfrom/netcdf/v2.3/temp")</code>.
+		Streams are <code>temp</code>, <code>sal</code>, <code>temp_error</code>,
+		<code>sal_error</code>. Note that file names sort lexically rather than
+		chronologically, so use the Icechunk store if you want the record in time
+		order without thinking about it.</p>
+
+		<p><b>R</b></p>
+		<p>R can read these files <i>without downloading them</i>. Append
+		<code>#mode=bytes</code> to the HTTPS URL and netCDF reads only the bytes
+		it needs.</p>
+<pre><code>install.packages("ncdf4")
+library(ncdf4)
+
+u &lt;- paste0("https://storage.googleapis.com/noaa-oar-rfrom/netcdf/v2.3/temp/",
+            "RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc#mode=bytes")
+nc &lt;- nc_open(u)
+
+# one horizontal slice: 4x4 points, first pressure level, first time step
+x &lt;- ncvar_get(nc, "ocean_temperature", start = c(600, 300, 1, 1), count = c(4, 4, 1, 1))
+nc_close(nc)</code></pre>
+
+		<p class="note">Dimensions are reversed relative to Python:
+		<code>(longitude, latitude, mean_pressure, time)</code>.
+		<code>RNetCDF::open.nc()</code> works the same way.</p>
+
+		<p>Streaming needs a netCDF library built with byte-range support. Most
+		are; to check yours, run the code above &#8212; if it fails with a message
+		about an unknown file format or an inaccessible DAP response, yours is
+		not, and you should download the file first:</p>
+<pre><code>u &lt;- paste0("https://storage.googleapis.com/noaa-oar-rfrom/netcdf/v2.3/temp/",
+            "RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc")
+download.file(u, "rfrom.nc", mode = "wb")   # ~7.5 GB
+nc &lt;- nc_open("rfrom.nc")</code></pre>
+
+		<p class="note">Files run from about 2.7 to 9.2 GB each, so downloading is
+		worth avoiding where you can.</p>
+		</div>
+
 		<p><b>Links to RFROM V2.2 data</b></p>
 		<ul>
 			<li><a href="https://data.pmel.noaa.gov/pmel/erddap/files/argo_rfromv22/" target="_blank">Ocean heat content</a></li>
