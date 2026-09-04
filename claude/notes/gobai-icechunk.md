@@ -105,11 +105,17 @@ off by default; icechunk says so in a warning at every startup:
 Rebasing cannot resolve a conflict that does not exist, so it loops. RFROM's
 build printed the same warning and simply got lucky.
 
-**Recovery was not possible either.** Reading the snapshot directly gave
-`SnapshotNotFoundError: snapshot id not found Q6ZDV7A3XF6D6KBKGV0G` from
-`resolve_ref_version_v2` — though that too was an anonymous read, so treat it
-with the same suspicion as the branch-pointer claim above. If this recurs, do the
-diagnosis **with credentials** before concluding anything (§4).
+**"Recovery was not possible" was wrong too.** Reading the orphan snapshot
+directly gave `SnapshotNotFoundError: snapshot id not found
+Q6ZDV7A3XF6D6KBKGV0G`, which was read as the snapshot being unusable. It was an
+anonymous read, and §4 shows why that proves nothing: the *successfully
+published* store gives exactly the same error anonymously, at its own valid
+snapshot id, while the identical call with credentials opens it and returns
+data. So the first store may well have been fine, or repairable. It was deleted
+before any of this was understood.
+
+If this ever recurs: **do the diagnosis with credentials, and do not delete
+anything until you have.**
 
 **The fix**, in `write_store`: `commit(message, rebase_tries=0)`. These builds are
 single-writer by construction — one script, one branch, one commit — so a
@@ -138,15 +144,33 @@ authenticated   main -> MD92HF22BRCTRF47BR60     (correct, every time)
 anonymous       main -> 1CECHNKREP0F1RSTCMT0     (the initial empty snapshot)
 ```
 
-and the anonymous answer *flapped*: sampled 15 times over 30 s, it returned the
-correct snapshot once and the stale one 14 times. Opening it anonymously then
+and the anonymous answer *flapped*, converging as edge copies expired:
+
+| minutes after commit | anonymous reads returning the new snapshot |
+|---|---|
+| ~6  | 1 of 15 |
+| ~28 | 5 of 10 |
+
+ Opening it anonymously then
 fails as a bare `GroupNotFoundError` naming `snapshot_id:
 1CECHNKREP0F1RSTCMT0` — which reads exactly like a store whose commit never
 landed.
 
-The cause is ordinary public-object caching. Icechunk keeps the branch pointer in
-the `repo` object at the store prefix root, and on a public bucket GCS serves it
-with:
+It is not only the branch pointer. Asking for an **explicit snapshot id**
+anonymously fails the same way:
+
+```
+SnapshotNotFoundError: snapshot id not found `MD92HF22BRCTRF47BR60`
+   0: icechunk::repository::resolve_ref_version_v2
+```
+
+while the same request with credentials opens the store and returns data. The
+`repo` object is icechunk's whole catalogue — branches *and* the snapshot index —
+so one stale copy makes every recent snapshot look as though it does not exist.
+That is why `SnapshotNotFoundError` is not evidence of a damaged store.
+
+The cause is ordinary public-object caching. On a public bucket GCS serves the
+`repo` object at the store prefix root with:
 
 ```
 cache-control: public, max-age=3600
