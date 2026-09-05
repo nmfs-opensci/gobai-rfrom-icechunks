@@ -150,6 +150,12 @@ and the anonymous answer *flapped*, converging as edge copies expired:
 |---|---|
 | ~6  | 1 of 15 |
 | ~28 | 5 of 10 |
+| ~64 | 12 of 12 |
+
+The ref object was written 23:20:49 with `max-age=3600`; the anonymous view was
+fully consistent by 00:23. **Do not trust an early-looking recovery** — a check
+at ~28 minutes that happened to hit a refreshed edge three times in a row read as
+"settled" and was not. Wait out the full hour, then sample repeatedly.
 
  Opening it anonymously then
 fails as a bare `GroupNotFoundError` naming `snapshot_id:
@@ -219,6 +225,25 @@ than just before the write: creating it is cheap and idempotent, and a
 credentials or repository problem should cost seconds, not a full parse.
 
 If a bulk delete is ever needed again, expect this and give the prefix a minute.
+
+## 5a. Verified anonymously, once the cache expired
+
+Sixty-four minutes after the commit, `gs://noaa-oar-gobai/icechunk/v202606` opens
+anonymously with the landing page's snippet run verbatim, and returns real data
+through the virtual byte-range references:
+
+```
+main -> MD92HF22BRCTRF47BR60
+time 1719 (1993-01-01 -> 2025-12-05), mean_pressure 58, latitude 720, longitude 1440
+weekly spacing uniform; data_mode absent, as intended
+o2   1993-01-01  [125.140 125.162 123.439 122.863]  umol kg-1
+o2   2025-12-05  [198.097 198.138 198.177 198.213]  umol kg-1
+no3  1993-01-01  [  5.131   5.133   5.291   5.252]  umol kg-1
+no3  2025-12-05  [  1.057   1.101   1.154   1.206]  umol kg-1
+```
+
+Both variables carry their CF `standard_name` and `umol kg-1`. The o2 first-step
+values match the authenticated read at the explicit snapshot exactly.
 
 ## 6. Landing page and README
 
