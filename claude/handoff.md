@@ -7,8 +7,7 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 - Repo: `nmfs-opensci/gobai-rfrom-icechunks`, working on `/home/jovyan/gobai-rfrom-icechunks`.
 - Branch `main`, clean. **No open PRs**; every task branch is merged and
-  deleted. PRs #29 (GOBAI HR Icechunk) and #30 (gridlook viewer) were
-  **squash-merged** — a branch stacked on an unmerged PR has to be rebased onto
+  deleted. PRs #29–#31 were **squash-merged** — a branch stacked on an unmerged PR has to be rebased onto
   `main` afterwards (`git rebase --onto origin/main <old tip>`), or it conflicts.
 - **Open issues: #21** (RFROM v2.2 Ocean Heat Content →
   NODD, not started), **#23** (pandas warning, cosmetic).
@@ -18,7 +17,8 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   `build_icechunk.py` (repo root) builds the virtual Icechunk stores.
   `requirements.txt` covers `nodd.py`; `requirements-icechunk.txt` covers
   `build_icechunk.py`. `publish_viewer.py` (repo root) builds gridlook and
-  uploads it to `gs://noaa-oar-gobai/viewer/` (PR #30). Off-hub setup is venv+pip only, walkthrough in `setup.md`
+  uploads it to `gs://<bucket>/viewer/`; `--product {gobai,rfrom}` is required
+  (PRs #30, #31). Off-hub setup is venv+pip only, walkthrough in `setup.md`
   (also `python nodd.py --setup`).
 - **Published:** `gs://noaa-oar-rfrom/` holds `netcdf/v2.1`, `v2.2`, `v2.3`
   (72 files, 527 GB), the virtual store `icechunk/v2.3` (2.4 MB), and
@@ -26,10 +26,14 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   247 GB), the virtual store `icechunk/v202606` (1.17 MB, snapshot
   `MD92HF22BRCTRF47BR60`), and `index.html`. Both buckets are CORS-enabled.
   **Both products are now fully published — netCDFs, store and landing page.**
-- **gridlook viewer — live since 2026-09-16** at `gs://noaa-oar-gobai/viewer/`
-  (gridlook `2649e66`, see `viewer/build-info.json`), linked from the landing
-  page and `GOBAI-O2/README.md`. Eli opened it in a browser: works, slow as
-  expected. See §8 of `rfromv-icechunk.md`.
+- **gridlook viewers — live since 2026-09-16** in both buckets at `viewer/`
+  (gridlook `2649e66`, see `viewer/build-info.json`), linked from each landing
+  page and each product README. GOBAI: Eli opened it in a browser — works,
+  slow as expected (~130 MB per map, the chunk shape). RFROM: same build and
+  checks, **not yet opened in a browser**. See §8 of `rfromv-icechunk.md`.
+  Both `index.html` files in the buckets match `main` as of #31.
+  To republish: `python publish_viewer.py --product gobai --build ~/gridlook`,
+  then `--product rfrom --dist /tmp/gridlook-dist` (one build serves both).
 - `RFROMV/setup_bare_VM.txt` is **Eli's own scratch cheat-sheet** — informal by
   design, overlaps `setup.md` on purpose. Do not tidy or sync it.
 
