@@ -55,6 +55,7 @@ table.dl th { background:#f4f6f8; }
 </header>
 <nav class="rf-nav" aria-label="Section navigation">
 	<a href="#about">About</a>
+	<a href="#viewer">View in a browser</a>
 	<a href="#erddap">Data Access (ERDDAP)</a>
 	<a href="#download">Data Access (Download)</a>
 	<a href="#code">Data Access (Code)</a>
@@ -112,6 +113,20 @@ table.dl th { background:#f4f6f8; }
 		<h3>Manuscript citation</h3>
 		<p>Sharp, J. D., Fassbender, A. J., Carter, B. R., Johnson, G. C., Schultz, C., Dunne, J. P. (2023). GOBAI-O<sub>2</sub>: temporally and spatially resolved fields of ocean interior dissolved oxygen over nearly 2 decades. <i>Earth System Science Data</i>, 15 (10), 4481 - 4518,. <a href="https://doi.org/10.5194/essd-15-4481-2023" target="_blank">https://doi.org/10.5194/essd-15-4481-2023</a>.</p>
 		<p class="display-it"><b>Contact:</b> <a href="mailto:jonathan.sharp@noaa.gov">jonathan.sharp@noaa.gov</a> | <a href="mailto:oar.pmel.gobop@noaa.gov">oar.pmel.gobop@noaa.gov</a></p>
+
+		<h2 class="sec" id="viewer">View in a browser</h2>
+		<p>Explore GOBAI HR-v1.0 on an interactive globe, with no install and no
+		account. The viewer is <a href="https://github.com/eeholmes/gridlook" target="_blank">gridlook</a>,
+		and it reads the Icechunk store directly from this bucket.</p>
+		<table class="dl">
+			<tr><th>Field</th><th>Viewer</th></tr>
+			<tr><td>Dissolved oxygen</td><td><a href="https://storage.googleapis.com/noaa-oar-gobai/viewer/index.html#icechunk+https://storage.googleapis.com/noaa-oar-gobai/icechunk/v202606::varname=o2" target="_blank">Open <code>o2</code> in the viewer</a></td></tr>
+			<tr><td>Nitrate</td><td><a href="https://storage.googleapis.com/noaa-oar-gobai/viewer/index.html#icechunk+https://storage.googleapis.com/noaa-oar-gobai/icechunk/v202606::varname=no3" target="_blank">Open <code>no3</code> in the viewer</a></td></tr>
+		</table>
+		<p class="note">The first map can take a while to appear: each view downloads
+		about 130&nbsp;MB, because the data are stored in 100-week blocks. Moving
+		between weeks in the same block is quick. Crossing into another block
+		downloads again.</p>
 
 		<h2 class="sec" id="erddap">Data Access &#8212; ERDDAP</h2>
 		<p>ERDDAP&#8217;s griddap form lets you subset by time, pressure and
