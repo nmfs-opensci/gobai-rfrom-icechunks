@@ -28,9 +28,8 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   **Both products are now fully published — netCDFs, store and landing page.**
 - **gridlook viewer — live since 2026-09-16** at `gs://noaa-oar-gobai/viewer/`
   (gridlook `2649e66`, see `viewer/build-info.json`), linked from the landing
-  page and `GOBAI-O2/README.md`. Files, MIME types and CORS checked over HTTP;
-  nothing has been rendered in a real browser by an agent — see §8 of
-  `rfromv-icechunk.md`.
+  page and `GOBAI-O2/README.md`. Eli opened it in a browser: works, slow as
+  expected. See §8 of `rfromv-icechunk.md`.
 - `RFROMV/setup_bare_VM.txt` is **Eli's own scratch cheat-sheet** — informal by
   design, overlaps `setup.md` on purpose. Do not tidy or sync it.
 
