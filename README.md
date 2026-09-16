@@ -30,7 +30,7 @@ README has its stream table, metadata decisions and read examples:
 | `publish_viewer.py` | builds the [gridlook](https://github.com/eeholmes/gridlook) browser viewer and uploads it to `gs://<bucket>/viewer/` |
 | `requirements.txt` | dependencies for `nodd.py` |
 | `requirements-icechunk.txt` | extra dependencies for `build_icechunk.py` |
-| `setup.md` | full environment setup off the JupyterHub (also `python nodd.py --setup`) |
+| `setup.md` | full environment setup (also `python nodd.py --setup`) |
 | `RFROMV/index.html`, `GOBAI-O2/index.html` | the public landing pages, uploaded to each bucket root |
 | `RFROMV/prep-one-netcdf-for-NODD.ipynb` | step-by-step walkthrough of one block — explains *why*, not needed to rebuild |
 | `RFROMV/icechunk-smoke-test.ipynb` | builds a small local store and checks it; run before a real store build |
@@ -40,8 +40,8 @@ README has its stream table, metadata decisions and read examples:
 ## Rebuilding from scratch
 
 All of this runs anywhere with Python 3.11+, ~35 GB of scratch disk and a fast
-network. You do not need the JupyterHub. Only uploads need credentials: reading
-ERDDAP and the public buckets is anonymous.
+network. Only uploads need credentials: reading ERDDAP and the public buckets
+is anonymous.
 
 ### 1. Environment
 
