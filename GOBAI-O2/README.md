@@ -237,8 +237,8 @@ stable/realtime infix, so the date in the name is the first thing that varies.
 ### Reading from R
 
 R can read these files **without downloading them**. Appending `#mode=bytes` to
-the HTTPS URL makes netCDF fetch only the byte ranges it needs — measured on the
-hub against a 7.5 GB RFROM file on the identical grid: `nc_open` in 4.3 s, a 4×4
+the HTTPS URL makes netCDF fetch only the byte ranges it needs — measured against
+a 7.5 GB RFROM file on the identical grid: `nc_open` in 4.3 s, a 4×4
 slice in 0.9 s.
 
 ```r
@@ -322,17 +322,17 @@ access to, which is `gs://noaa-oar-gobai`. The dependency manifest,
 `requirements.txt`, lives at the repo root next to `nodd.py` and covers both
 products.
 
-Two environment variables override the JupyterHub defaults so the script runs on
-a bare VM or a laptop:
+Two environment variables set where the script works and which credentials it
+uses:
 
 | variable | default | meaning |
 |---|---|---|
-| `NODD_SCRATCH_DIR` | `/home/jovyan/shared-public/gobai-scratch` (GOBAI streams) | download + output scratch; needs ~35 GB free |
-| `NODD_GCS_TOKEN` | `~/.config/gcloud/application_default_credentials.json` (hub path) | credentials JSON path, **or** the keyword `google_default` to resolve ADC the usual way |
+| `NODD_SCRATCH_DIR` | `~/gobai-scratch` (GOBAI streams) | download + output scratch; needs ~35 GB free |
+| `NODD_GCS_TOKEN` | `~/.config/gcloud/application_default_credentials.json` | credentials JSON path, **or** the keyword `google_default` to resolve ADC the usual way |
 
 The older `RFROM_SCRATCH_DIR` / `RFROM_GCS_TOKEN` names are still honoured. Note
 the scratch **default** is product-specific (`gobai-scratch` vs
-`rfromv-scratch`), so GOBAI and RFROM runs on the same hub do not collide; an
+`rfromv-scratch`), so GOBAI and RFROM runs on the same machine do not collide; an
 explicit `NODD_SCRATCH_DIR` overrides both.
 
 ## Running the batch script

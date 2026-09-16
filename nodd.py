@@ -55,9 +55,9 @@ Examples
 
 Environment
 -----------
-The defaults assume the JupyterHub. Two paths are overridable so the script also
-runs on a bare VM or a laptop: ``NODD_SCRATCH_DIR`` (download + output scratch,
-needs ~35 GB free) and ``NODD_GCS_TOKEN`` (a credentials JSON path, or the
+Two paths are configurable: ``NODD_SCRATCH_DIR`` (download + output scratch,
+needs ~35 GB free; default ``~/rfromv-scratch`` or ``~/gobai-scratch`` by
+product) and ``NODD_GCS_TOKEN`` (a credentials JSON path, or the
 keyword "google_default" to resolve ADC the usual way). The older ``RFROM_``-
 prefixed names are still honoured. Run ``--setup`` (or see setup.md) for the
 venv + credentials walkthrough.
@@ -112,7 +112,7 @@ PRODUCTS = {
     "rfrom": {
         "bucket": "noaa-oar-rfrom",
         "default_version": "v2.3",
-        "scratch_default": "/home/jovyan/shared-public/rfromv-scratch",
+        "scratch_default": "~/rfromv-scratch",
         "cf_refinements": False,
     },
     "gobai": {
@@ -121,28 +121,28 @@ PRODUCTS = {
         # ``title`` global attribute). ERDDAP's dataset title says "HR-v1.0"
         # instead; the files are the authority here.
         "default_version": "v202606",
-        "scratch_default": "/home/jovyan/shared-public/gobai-scratch",
+        "scratch_default": "~/gobai-scratch",
         "cf_refinements": True,
     },
 }
 
 # Scratch / local paths. erddap/ holds monthly source downloads; nodd/ holds the
-# assembled output files before upload. The default is the JupyterHub shared
-# volume and depends on the product, so these are resolved per run by
-# ``configure_paths()``; off-hub (bare VM, laptop) set NODD_SCRATCH_DIR to any
-# writable path with room for ~35 GB (one block's downloads plus its output).
+# assembled output files before upload. The default is in the home directory
+# and depends on the product, so these are resolved per run by
+# ``configure_paths()``. Set NODD_SCRATCH_DIR to put it on a disk with room for
+# ~35 GB (one block's downloads plus its output).
 SCRATCH_DIR = None
 DOWNLOAD_DIR = None
 OUTPUT_DIR = None
 
 # GCS_TOKEN is passed straight to gcsfs: either a path to a credentials JSON
-# (the default is where `gcloud auth application-default login` writes on the
-# hub) or a gcsfs token keyword -- "google_default" resolves ADC the normal way,
+# (the default is where `gcloud auth application-default login` writes it) or
+# a gcsfs token keyword -- "google_default" resolves ADC the normal way,
 # including GOOGLE_APPLICATION_CREDENTIALS. Override with NODD_GCS_TOKEN.
 GCS_TOKEN = (
     os.environ.get("NODD_GCS_TOKEN")
     or os.environ.get("RFROM_GCS_TOKEN")  # pre-#13 name, still honoured
-    or "/home/jovyan/.config/gcloud/application_default_credentials.json"
+    or "~/.config/gcloud/application_default_credentials.json"
 )
 if os.sep in GCS_TOKEN or GCS_TOKEN.startswith("~"):
     GCS_TOKEN = os.path.expanduser(GCS_TOKEN)
@@ -910,7 +910,7 @@ def main(argv=None):
     p.add_argument("--keep-scratch", action="store_true",
                    help="Do not delete downloaded monthly files / local outputs.")
     p.add_argument("--setup", action="store_true",
-                   help="Print the full off-hub setup walkthrough (setup.md) and exit: "
+                   help="Print the full setup walkthrough (setup.md) and exit: "
                         "Python env, scratch disk, GCS credentials, long-run tips.")
     args = p.parse_args(argv)
 
@@ -948,8 +948,7 @@ def main(argv=None):
     # surfaces on the first file open, i.e. after a block has been downloaded.
     check_netcdf_engine(p)
 
-    # Report the resolved scratch dir BEFORE creating it: if NODD_SCRATCH_DIR is
-    # unset off-hub this falls back to the hub path, and the failure should name it.
+    # Report the resolved scratch dir BEFORE creating it, so a failure names it.
     print(f"Scratch: {SCRATCH_DIR}")
     try:
         os.makedirs(DOWNLOAD_DIR, exist_ok=True)
@@ -958,7 +957,7 @@ def main(argv=None):
         p.error(
             f"cannot create scratch directory {SCRATCH_DIR}: {exc}\n"
             "Set NODD_SCRATCH_DIR to a writable path with ~35 GB free "
-            "(the default is the JupyterHub location)."
+            "(the default is in your home directory)."
         )
 
     do_upload = not args.no_upload

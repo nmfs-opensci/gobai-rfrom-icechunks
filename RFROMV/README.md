@@ -274,8 +274,8 @@ the way `build_icechunk.block_start` does.
 ### Reading from R
 
 R can read these files **without downloading them**. Appending `#mode=bytes` to
-the HTTPS URL makes netCDF fetch only the byte ranges it needs — verified on the
-hub against a 7.5 GB file: `nc_open` in 4.3 s, a 4×4 slice in 0.9 s.
+the HTTPS URL makes netCDF fetch only the byte ranges it needs — measured against
+a 7.5 GB file: `nc_open` in 4.3 s, a 4×4 slice in 0.9 s.
 
 ```r
 install.packages("ncdf4")
@@ -347,8 +347,8 @@ the store is Python-only.
   `curl -s "https://storage.googleapis.com/noaa-oar-rfrom/index.html?cb=$RANDOM"`
   — or you will think the upload failed when it did not. Viewers see the old
   page for the same hour.
-- **`../requirements.txt`** — pip dependencies for running `nodd.py` off-hub.
-  Only needed off-hub; see "Running off-hub" below.
+- **`../requirements.txt`** — pip dependencies for `nodd.py`; see
+  ["Environment"](#environment) below.
 
 ### Sandbox (exploratory scratch — not part of the pipeline)
 
@@ -359,34 +359,26 @@ the store is Python-only.
 
 ## Environment
 
-The notebooks run on the JupyterHub, where the data volumes and cloud
-credentials are already mounted; dependencies are installed into the kernel by
-the `%pip install -qU ...` cell at the top of each notebook. NODD upload uses
-`gcsfs` with application-default credentials at
-`~/.config/gcloud/application_default_credentials.json`, and scratch space
-(downloads + local output) defaults to `/home/jovyan/shared-public/rfromv-scratch`.
+The pipeline needs Python, ~35 GB of scratch disk, and credentials that can
+write to `gs://noaa-oar-rfrom`; it runs the same on a Linux VM or a Mac. The full
+walkthrough (venv install, scratch space, GCS credentials, tmux for long runs,
+measured resource expectations) is in [`../setup.md`](../setup.md), or run
+`python ../nodd.py --setup` to print it. The dependency manifest,
+`requirements.txt`, lives at the repo root next to `nodd.py`. The notebooks
+install their own dependencies in a `%pip install` cell at the top.
 
-`nodd.py` also runs anywhere else — a bare VM, a laptop — via two environment
-variables that override those two hub paths:
+Two environment variables set where the script works and which credentials it
+uses:
 
 | variable | default | meaning |
 |---|---|---|
-| `NODD_SCRATCH_DIR` | `/home/jovyan/shared-public/rfromv-scratch` (RFROM streams) | download + output scratch; needs ~35 GB free |
-| `NODD_GCS_TOKEN` | `~/.config/gcloud/application_default_credentials.json` (hub path) | credentials JSON path, **or** the keyword `google_default` to resolve ADC the usual way |
+| `NODD_SCRATCH_DIR` | `~/rfromv-scratch` (RFROM streams) | download + output scratch; needs ~35 GB free |
+| `NODD_GCS_TOKEN` | `~/.config/gcloud/application_default_credentials.json` | credentials JSON path, **or** the keyword `google_default` to resolve ADC the usual way |
 
 The pre-issue-#13 names `RFROM_SCRATCH_DIR` / `RFROM_GCS_TOKEN` are still
 honoured. The scratch **default** is product-specific — RFROM streams default to
 `rfromv-scratch`, GOBAI streams to `gobai-scratch` — so the two do not collide on
 a shared machine; an explicit `NODD_SCRATCH_DIR` overrides both.
-
-## Running off-hub (bare VM or macOS)
-
-Nothing about the pipeline needs the hub — it needs Python, ~35 GB of scratch
-disk, and credentials that can write to `gs://noaa-oar-rfrom`. The full
-walkthrough (venv install, scratch space, GCS credentials, tmux for long runs,
-measured resource expectations) is in [`../setup.md`](../setup.md), or run
-`python ../nodd.py --setup` to print it. The dependency manifest it references,
-`requirements.txt`, lives at the repo root next to `nodd.py`.
 
 ## Running the batch script
 

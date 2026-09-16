@@ -1,4 +1,4 @@
-# Running `nodd.py` off-hub (bare VM or macOS)
+# Setting up to run `nodd.py` (Linux VM or macOS)
 
 This covers **both** products `nodd.py` handles — RFROM (`gs://noaa-oar-rfrom`)
 and GOBAI HR (`gs://noaa-oar-gobai`) — since the environment, dependencies, and
@@ -6,8 +6,8 @@ credentials mechanism are identical; only the destination bucket and scratch
 default differ per stream. Print this page any time with `python nodd.py
 --setup`; the maintained source is `setup.md` at the repo root.
 
-Nothing about the pipeline needs the JupyterHub — it needs Python, ~35 GB of
-scratch disk, and credentials that can write to the target bucket. The steps are
+The pipeline needs Python, ~35 GB of scratch disk, and credentials that can
+write to the target bucket. The steps are
 the same on a bare Linux VM and on a Mac; where they differ it is called out.
 
 On a truly minimal VM image, install the basics first — the steps below assume
@@ -74,10 +74,9 @@ Point `NODD_SCRATCH_DIR` at any writable path with room to spare. The script
 creates the directory tree itself (`erddap/` for monthly downloads, `nodd/` for
 assembled output), so there is no `mkdir` to do by hand — but the filesystem must
 actually have the space, and on a cloud VM that usually means an attached data
-disk rather than the small boot disk. If unset, the default is per-product —
-`/home/jovyan/shared-public/rfromv-scratch` for RFROM streams,
-`/home/jovyan/shared-public/gobai-scratch` for GOBAI streams — so an explicit
-override is required off-hub either way.
+disk rather than the small boot disk. If unset, the default is per-product, in
+your home directory — `~/rfromv-scratch` for RFROM streams, `~/gobai-scratch`
+for GOBAI streams. Set it explicitly whenever home is on a small disk.
 
 ```sh
 export NODD_SCRATCH_DIR="$HOME/rfromv-scratch"       # VM: e.g. /mnt/data/rfromv-scratch

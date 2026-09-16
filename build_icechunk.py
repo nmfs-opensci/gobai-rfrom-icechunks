@@ -124,7 +124,7 @@ DATA_MODE_ATTRS = {
 GCS_TOKEN = (
     os.environ.get("NODD_GCS_TOKEN")
     or os.environ.get("RFROM_GCS_TOKEN")
-    or "/home/jovyan/.config/gcloud/application_default_credentials.json"
+    or "~/.config/gcloud/application_default_credentials.json"
 )
 if os.sep in GCS_TOKEN or GCS_TOKEN.startswith("~"):
     GCS_TOKEN = os.path.expanduser(GCS_TOKEN)
