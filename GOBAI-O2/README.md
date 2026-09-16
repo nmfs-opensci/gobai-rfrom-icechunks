@@ -181,6 +181,26 @@ copy of the data:
 
 For the store, see ["Reading the store"](#reading-the-store) above.
 
+### Viewing in a browser
+
+The store opens in [gridlook](https://github.com/eeholmes/gridlook), a WebGL
+globe viewer hosted in the same bucket. No install, no account:
+
+- **[Open oxygen (`o2`) in the viewer](https://storage.googleapis.com/noaa-oar-gobai/viewer/index.html#icechunk+https://storage.googleapis.com/noaa-oar-gobai/icechunk/v202606::varname=o2)**
+- **[Open nitrate (`no3`) in the viewer](https://storage.googleapis.com/noaa-oar-gobai/viewer/index.html#icechunk+https://storage.googleapis.com/noaa-oar-gobai/icechunk/v202606::varname=no3)**
+
+The dataset goes after the `#`, so the same viewer opens any public Zarr or
+Icechunk store: `…/viewer/index.html#icechunk+<https URL of the store>`.
+
+Expect the first map to take a while. The store inherits the netCDFs' chunks,
+`(100, 1, 180, 180)`, so one global map at one level downloads ~131 MB, and
+moving to another 100-week block downloads that much again. Steps within a
+block are cached. See §7–§8 of
+[`../claude/notes/rfromv-icechunk.md`](../claude/notes/rfromv-icechunk.md).
+
+The viewer is published by [`../publish_viewer.py`](../publish_viewer.py); its
+docstring covers building gridlook and uploading it.
+
 ### Reading the netCDFs directly
 
 ```sh
@@ -261,6 +281,8 @@ the store is Python-only.
 - **`../nodd.py`** — the batch script, shared with RFROMV. Handles all eight
   streams (RFROM's six plus GOBAI's two); `--stream o2` / `--stream no3` select
   these. See "Running the batch script" below.
+- **`../publish_viewer.py`** — builds the gridlook viewer and uploads it to
+  `gs://noaa-oar-gobai/viewer/`. See ["Viewing in a browser"](#viewing-in-a-browser).
 - **`README.md`** — this file.
 
 - **`index.html`** — the public landing page, uploaded to
