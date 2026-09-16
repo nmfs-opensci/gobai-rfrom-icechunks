@@ -198,8 +198,8 @@ moving to another 100-week block downloads that much again. Steps within a
 block are cached. See §7–§8 of
 [`../claude/notes/rfromv-icechunk.md`](../claude/notes/rfromv-icechunk.md).
 
-The viewer is published by [`../publish_viewer.py`](../publish_viewer.py); its
-docstring covers building gridlook and uploading it.
+The viewer is published by [`../publish_viewer.py`](../publish_viewer.py)
+(`--product gobai`); its docstring covers building gridlook and uploading it.
 
 ### Reading the netCDFs directly
 
