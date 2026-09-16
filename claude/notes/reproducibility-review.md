@@ -26,12 +26,15 @@ Python 3.12.12 venv on the hub, and `pip check` was clean:
 The lock has not been tested on macOS or with a full 100-step block (the hub
 container is capped at ~1.9 GB of memory).
 
-Still open: items 5 (`CLAUDE.md`), 8, 10 and 11, and the GOBAI monthly notebook.
-One more gap turned up while writing the rebuild recipe:
-`build_icechunk.open_repo` passes `GCS_TOKEN` to
-`ic.gcs_storage(application_credentials=...)`, which expects a file path. So
-setup.md's option c (`NODD_GCS_TOKEN=google_default`) works for `nodd.py` but
-probably not for the store build. This is untested.
+Still open: items 8, 10 and 11, and the GOBAI monthly notebook.
+Item 5 is fixed too: `CLAUDE.md` was rewritten around the current layout, and
+the old-stream history moved to `pipeline-history.md`.
+
+A gap found while writing the rebuild recipe is also fixed.
+`build_icechunk.open_repo` passed `NODD_GCS_TOKEN=google_default` to Icechunk
+as a file path, which fails with "Unable to open service account file from
+google_default". It now uses `from_env=True` for that keyword, and
+`--store gobai_hr --validate` passes with it.
 
 Question asked: could someone new to this repo work out exactly how to rebuild
 the NODD netCDFs and the virtual Icechunk stores? Short answer: **mostly, but
