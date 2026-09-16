@@ -10,8 +10,8 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   squash-merged on 2026-09-16 and its branch deleted, locally and on GitHub.
 - PRs #29–#31 were **squash-merged**. A branch stacked on an unmerged PR has to be
   rebased onto `main` afterwards (`git rebase --onto origin/main <old tip>`).
-- **Open issues:** #33 (reproducibility cleanup checklist from the #32 review),
-  #21 (RFROM v2.2 Ocean Heat Content → NODD, not started), #23 (pandas warning,
+- **Open issues:** #34 (**next task** — see below), #33 (reproducibility
+  cleanup checklist from the #32 review), #21 (RFROM v2.2 Ocean Heat Content → NODD, not started), #23 (pandas warning,
   cosmetic).
 - **Published:** `gs://noaa-oar-rfrom/` holds `netcdf/v2.1`, `v2.2` and `v2.3`,
   the virtual store `icechunk/v2.3`, `index.html` and `viewer/`.
@@ -59,8 +59,21 @@ Summary; the detail is in `claude/notes/reproducibility-review.md` and
 
 ## Next task
 
-**Nothing is assigned.** Issues #33 (cleanup checklist), #21 and #23 are not
-queued — ask.
+**Issue #34, when Eli says to start** (don't start it unprompted):
+
+1. Record when each netCDF's sources were pulled from ERDDAP (download date,
+   dataset ids, ERDDAP last-update time, last time step), and carry that
+   through to the store.
+2. An update script (`update_nodd.py` or `nodd.py --update`) that adds new
+   ERDDAP weeks to the short tail block. For example, a tail with weeks 1–20
+   gains week 21; at 100 steps it becomes a full block and a new tail starts.
+   It then rebuilds the store in the same run, because overwriting a netCDF
+   breaks the store's byte-range references. Also: tail names change with the
+   end date, RFROM promotion renames blocks and moves `realtime_start`, and
+   there is the hour-long stale anonymous read.
+
+The issue lists the known traps. Read `rfromv-icechunk.md` and
+`gobai-icechunk.md` before designing. #33, #21 and #23 are not queued.
 
 ## Notes
 
@@ -107,9 +120,6 @@ queued — ask.
 ## Follow-ups (not blocking)
 
 - Everything small is in #33.
-- `update_nodd.py` (the weekly realtime reconcile) is not built. Promoting block 16's
-  provisional weeks renames the file and needs a store rebuild, not just a
-  `realtime_start` change. Every rebuild has the hour-long stale-read window.
 - `unsafe_use_metadata` on the Icechunk storage settings is not enabled;
   `rebase_tries=0` makes failures loud instead. Revisit if commits ever fail
   for real.
