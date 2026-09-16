@@ -6,11 +6,8 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 ## Repo state (2026-09-16)
 
 - Repo: `nmfs-opensci/gobai-rfrom-icechunks`, at `/home/jovyan/gobai-rfrom-icechunks`.
-- **PR #32 is open, awaiting Eli's review/local test** — branch
-  `docs/reproducibility-review`. Do not merge it unasked. Until it merges,
-  `main` still has the old `CLAUDE.md`, the six-stream entries in `nodd.py`,
-  hub-path defaults, and `RFROMV/setup_bare_VM.txt`. If a new session starts
-  before the merge, read the PR branch, not `main`.
+- Branch `main`, clean. **No open PRs.** PR #32 (reproducibility review) was
+  squash-merged on 2026-09-16 and its branch deleted, locally and on GitHub.
 - PRs #29–#31 were **squash-merged**. A branch stacked on an unmerged PR has to be
   rebased onto `main` afterwards (`git rebase --onto origin/main <old tip>`).
 - **Open issues:** #33 (reproducibility cleanup checklist from the #32 review),
@@ -22,11 +19,11 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   (snapshot `MD92HF22BRCTRF47BR60`), `index.html` and `viewer/`. Both products
   are fully published. The RFROM viewer has not been opened in a browser yet.
 
-## What PR #32 changes
+## What PR #32 changed (merged)
 
 The goal was that a newcomer can rebuild the netCDFs and stores from the docs.
 Summary; the detail is in `claude/notes/reproducibility-review.md` and
-`pipeline-history.md` (both on the PR branch):
+`pipeline-history.md`:
 
 - **Root README:** a "Rebuilding from scratch" recipe, a file map, and a reuse
   statement (Apache-2.0, attribution).
@@ -62,8 +59,8 @@ Summary; the detail is in `claude/notes/reproducibility-review.md` and
 
 ## Next task
 
-**Nothing is assigned.** Wait for Eli on PR #32. Issues #33, #21 and #23 are
-not queued — ask.
+**Nothing is assigned.** Issues #33 (cleanup checklist), #21 and #23 are not
+queued — ask.
 
 ## Notes
 
@@ -71,8 +68,8 @@ not queued — ask.
 |---|---|
 | `rfromv-icechunk.md` | the virtual Icechunk design, measurements, reader recipe, codec/browser findings, recorded versions (§11). **Read before any store work.** |
 | `gobai-icechunk.md` | the GOBAI HR store, and three `build_icechunk.py` traps that apply to every store. **Read with `rfromv-icechunk.md` before any store work.** |
-| `reproducibility-review.md` | the #32 review, what was fixed, and the lock-file test record *(PR branch)* |
-| `pipeline-history.md` | resolved work: ERDDAP timeout, h5py, the six → four stream restructure, the hub-free defaults *(latter two on PR branch)* |
+| `reproducibility-review.md` | the #32 review, what was fixed, and the lock-file test record |
+| `pipeline-history.md` | resolved work: ERDDAP timeout, h5py, the six → four stream restructure, the hub-free defaults |
 | `nodd-batch-script.md` | `nodd.py` design decisions and CF resolutions (historical six-stream layout) |
 | `nodd-prep.md` | the reference single-file pipeline (historical) |
 | `gobai-nodd.md` | GOBAI HR → NODD recon and validation |
