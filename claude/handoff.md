@@ -10,8 +10,7 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   deleted. PRs #29 (GOBAI HR Icechunk) and #30 (gridlook viewer) were
   **squash-merged** — a branch stacked on an unmerged PR has to be rebased onto
   `main` afterwards (`git rebase --onto origin/main <old tip>`), or it conflicts.
-- **Open issues: #26** (GOBAI HR virtual Icechunk — finished in #29, but the
-  squash merge did not auto-close it), **#21** (RFROM v2.2 Ocean Heat Content →
+- **Open issues: #21** (RFROM v2.2 Ocean Heat Content →
   NODD, not started), **#23** (pandas warning, cosmetic).
 - `nodd.py` (repo root) is the batch script for every stream of both products:
   RFROM v2.3 (`temp`, `sal`, `temp_error`, `sal_error`), v2.2/v2.1
@@ -50,7 +49,7 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 ## Next task
 
 **Nothing is assigned.** Outstanding on Eli's side: upload the viewer and the
-new landing page, and close #26. The remaining open issues (#21 OHC, #23 pandas
+new landing page. The remaining open issues (#21 OHC, #23 pandas
 warning) have not been started and are not queued — ask.
 
 Do not start #21 from this handoff.
