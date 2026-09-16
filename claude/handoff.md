@@ -6,18 +6,20 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 ## Repo state
 
 - Repo: `nmfs-opensci/gobai-rfrom-icechunks`, working on `/home/jovyan/gobai-rfrom-icechunks`.
-- Branch `main`, clean. **One open PR: #29** (issue #26, GOBAI HR Icechunk) on
-  branch `issue-26-gobai-icechunk` — written and verified, waiting on Eli to
-  merge. Every earlier task branch is merged and deleted.
-- **Open issues: #26** (GOBAI HR virtual Icechunk — done, closes with PR #29),
-  **#21** (RFROM v2.2 Ocean Heat Content → NODD, not started), **#23** (pandas
-  warning, cosmetic).
+- Branch `main`, clean. **No open PRs**; every task branch is merged and
+  deleted. PRs #29 (GOBAI HR Icechunk) and #30 (gridlook viewer) were
+  **squash-merged** — a branch stacked on an unmerged PR has to be rebased onto
+  `main` afterwards (`git rebase --onto origin/main <old tip>`), or it conflicts.
+- **Open issues: #26** (GOBAI HR virtual Icechunk — finished in #29, but the
+  squash merge did not auto-close it), **#21** (RFROM v2.2 Ocean Heat Content →
+  NODD, not started), **#23** (pandas warning, cosmetic).
 - `nodd.py` (repo root) is the batch script for every stream of both products:
   RFROM v2.3 (`temp`, `sal`, `temp_error`, `sal_error`), v2.2/v2.1
   (`temp_v22`, `sal_v22`, `temp_v21`), GOBAI HR (`o2`, `no3`).
   `build_icechunk.py` (repo root) builds the virtual Icechunk stores.
   `requirements.txt` covers `nodd.py`; `requirements-icechunk.txt` covers
-  `build_icechunk.py`. Off-hub setup is venv+pip only, walkthrough in `setup.md`
+  `build_icechunk.py`. `publish_viewer.py` (repo root) builds gridlook and
+  uploads it to `gs://noaa-oar-gobai/viewer/` (PR #30). Off-hub setup is venv+pip only, walkthrough in `setup.md`
   (also `python nodd.py --setup`).
 - **Published:** `gs://noaa-oar-rfrom/` holds `netcdf/v2.1`, `v2.2`, `v2.3`
   (72 files, 527 GB), the virtual store `icechunk/v2.3` (2.4 MB), and
@@ -25,6 +27,13 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   247 GB), the virtual store `icechunk/v202606` (1.17 MB, snapshot
   `MD92HF22BRCTRF47BR60`), and `index.html`. Both buckets are CORS-enabled.
   **Both products are now fully published — netCDFs, store and landing page.**
+- **gridlook viewer — merged in #30, not yet uploaded as of 2026-09-16.**
+  `GOBAI-O2/index.html` and `GOBAI-O2/README.md` now link to
+  `…/noaa-oar-gobai/viewer/index.html#icechunk+…/icechunk/v202606::varname=o2`
+  (and `no3`). Those links are dead until Eli runs
+  `python publish_viewer.py --build ~/gridlook` **and then** re-uploads
+  `index.html`. Nothing has been rendered in a real browser yet — see §8 of
+  `rfromv-icechunk.md` for what was verified.
 - `RFROMV/setup_bare_VM.txt` is **Eli's own scratch cheat-sheet** — informal by
   design, overlaps `setup.md` on purpose. Do not tidy or sync it.
 
@@ -40,9 +49,9 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 ## Next task
 
-**Nothing is assigned.** Issue #26 is finished and sitting in PR #29; the only
-thing outstanding on it is Eli merging and closing. The remaining open issues
-(#21 OHC, #23 pandas warning) have not been started and are not queued — ask.
+**Nothing is assigned.** Outstanding on Eli's side: upload the viewer and the
+new landing page, and close #26. The remaining open issues (#21 OHC, #23 pandas
+warning) have not been started and are not queued — ask.
 
 Do not start #21 from this handoff.
 
@@ -75,6 +84,9 @@ Do not start #21 from this handoff.
   (needs a Google sign-in, but no project or permissions).
   `storage.googleapis.com/<prefix>/` 404s — that is the endpoint, not
   permissions. `?prefix=...&delimiter=/` lists with no account.
+- **`npm run build` of gridlook is OOM-killed on the hub** (container capped
+  at ~1.9 GB). `publish_viewer.py` uses `vite build --sourcemap false` with a
+  500 MB Node heap instead, which fits. No bigger VM needed; the upload is 22.5 MB.
 - **`index.html` is CDN-cached for an hour.** Verify uploads with `?cb=$RANDOM`
   or a stale copy reads as a failed upload. Viewers see the old page that long.
 - **A freshly built Icechunk store looks broken to an anonymous reader for about

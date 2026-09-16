@@ -373,6 +373,15 @@ Two things that matter if this is ever redone:
 **Still verified only with curl, not a browser.** The server now returns correct
 CORS headers. Whether gridlook renders the store is untested.
 
+**Update 2026-09-16 (PR #30, GOBAI store `icechunk/v202606`), still no browser:**
+icechunk-js (gridlook's copy) opens the store in ~0.6 s and decodes a virtual
+`o2` chunk through `numcodecs.shuffle` + `numcodecs.zlib` (mean ≈ 217 umol/kg),
+so icechunk-js reads what icechunk 2.2.0 wrote. gridlook's own
+`indexFromIcechunk` + `getGridType`, run under vitest, list `o2`/`no3` as
+visible and detect both as `regular`. Still unchecked: the actual WebGL render,
+the level selector for `mean_pressure`, and in-browser CF time decoding. The
+viewer is hosted in the same bucket (`viewer/`), built by `publish_viewer.py`.
+
 **Blocker 2 — the chunk shape, which is much worse in a browser.** A single
 global map at one time and one level touches 32 chunks (4 x 8 tiles), each
 holding 100 time steps: **~131 MB compressed to download and ~415 MB
