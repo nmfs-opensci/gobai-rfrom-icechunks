@@ -79,6 +79,181 @@ The source annotates variables with a non-standard `Description` attribute and n
 Data Products, in prep."` are passed through **verbatim** — the published files
 stay honest about the product's pre-publication status.
 
+## The Icechunk store
+
+[`../build_icechunk.py`](../build_icechunk.py) merges both streams into one
+virtual Icechunk store at `gs://noaa-oar-gobai/icechunk/v202606` — one dataset,
+one 1719-step weekly time axis, `o2` and `no3` side by side. It is **100 %
+virtual**: the netCDFs stay exactly where they are, nothing is copied, and the
+store itself is a few MB.
+
+```sh
+python build_icechunk.py --store gobai_hr --list                 # what gets referenced
+python build_icechunk.py --store gobai_hr --local-repo /tmp/x    # full dry run, no upload
+python build_icechunk.py --store gobai_hr                        # build and validate
+python build_icechunk.py --store gobai_hr --validate             # re-check a built store
+```
+
+This is the same machinery as RFROM v2.3 (GitHub issue #17), because GOBAI HR
+shares RFROM's grid and block layout; the `gobai_hr` entry in `STORES` differs
+only in bucket, prefixes and variables. The design decisions, the measurements
+behind them and the reader recipe are in
+[`../claude/notes/rfromv-icechunk.md`](../claude/notes/rfromv-icechunk.md) —
+read that rather than rediscovering them. Two differences from RFROM:
+
+- **No `data_mode` coordinate.** GOBAI HR has no stable/realtime split, so
+  `realtime_start` is `None` and no mode flag is written. RFROM's store has one
+  because half its record is provisional.
+- **Nothing to migrate.** The tree was published as one continuous series per
+  variable from the start, so there is no equivalent of RFROM's `migrate_v23.py`
+  and no old prefixes to retire.
+
+Two constraints the netCDFs must satisfy, both enforced with named errors: every
+file feeding one variable shares one chunk grid, and only the **last** file may
+be short (written with an unlimited time dimension so HDF5 pads its edge chunk).
+Zarr has no variable-length chunks, so a virtual store cannot paper over either.
+Both GOBAI tails were originally published with the time chunk shrunk to 19 and
+had to be rebuilt with `--force` before the store could be built at all (issue
+#26); the padding cost 1.05× on disk, 1.30 → 1.37 GB.
+
+### Reading the store
+
+```python
+import icechunk as ic, xarray as xr
+
+SRC = "gs://noaa-oar-gobai/netcdf/v202606/"
+repo = ic.Repository.open(
+    ic.gcs_storage(bucket="noaa-oar-gobai", prefix="icechunk/v202606", anonymous=True),
+    authorize_virtual_chunk_access=ic.containers_credentials({SRC: ic.gcs_credentials(anonymous=True)}),
+)
+ds = xr.open_zarr(repo.readonly_session("main").store, consolidated=False, chunks={})
+```
+
+Byte-for-byte the snippet on the landing page. If reads feel slow, raise Zarr's
+default concurrency of 10 — for readers and writers alike:
+`import zarr; zarr.config.set({"async.concurrency": 128})`.
+
+The store and the netCDFs it references are **two independent credential
+settings**, even though both live in the same public bucket. A reader that
+configures only the repository gets metadata and no data — the
+`authorize_virtual_chunk_access` argument above is what makes the byte ranges
+readable.
+
+**Compatibility caveat**, inherited from the netCDFs: the arrays carry
+`numcodecs.shuffle` + `numcodecs.zlib`, which are *extension* codecs in the Zarr
+v3 registry rather than core spec codecs. **The store reads from zarr-python;
+other Zarr implementations may refuse it.** zarr-python warns to this effect on
+every build and open — expected, and nothing to fix in the store. Background and
+the fallback plan are in §8 of
+[`../claude/notes/rfromv-icechunk.md`](../claude/notes/rfromv-icechunk.md).
+
+**Reading needs `icechunk`, `zarr` and `xarray` — not `virtualizarr`.**
+VirtualiZarr is a *build*-time dependency: it parses the HDF5 headers into chunk
+manifests. Nothing at read time goes near it, so do not put it in a consumer's
+install line.
+
+```sh
+pip install icechunk zarr xarray          # to read the store
+```
+
+To *build* a store you need the full set, which is **not** in
+[`../requirements.txt`](../requirements.txt) — that file covers `nodd.py` only:
+
+```sh
+pip install -r ../requirements.txt -r ../requirements-icechunk.txt
+```
+
+## Reading the published data
+
+Everything below is anonymous — the bucket is open data, so no account, no
+credentials, no quota. This mirrors the public landing page,
+[`index.html`](index.html), served at
+<https://storage.googleapis.com/noaa-oar-gobai/index.html>. **Keep the two in
+step**: if you change the code here, change it there and re-upload.
+
+There are two routes in, returning identical values because the store holds no
+copy of the data:
+
+| | Where | For |
+|---|---|---|
+| Icechunk store | `gs://noaa-oar-gobai/icechunk/v202606` | the whole 1719-week record, both variables, as one dataset — Python only |
+| netCDF files | `gs://noaa-oar-gobai/netcdf/v202606/` | ordinary netCDF-4, 18 files per variable, any language |
+
+For the store, see ["Reading the store"](#reading-the-store) above.
+
+### Reading the netCDFs directly
+
+```sh
+pip install xarray gcsfs h5netcdf
+```
+
+```python
+import xarray as xr
+
+url = "gs://noaa-oar-gobai/netcdf/v202606/o2/GOBAI-O2-HR-v202606_1993-01-01_1994-11-25.nc"
+ds = xr.open_dataset(url, engine="h5netcdf", storage_options={"token": "anon"}, chunks={})
+```
+
+To browse the bucket by eye, use the Google Cloud console — the bucket is
+public, so no project or permissions are needed, but the console does require a
+Google sign-in:
+<https://console.cloud.google.com/storage/browser/noaa-oar-gobai/netcdf/v202606/>
+
+With no account at all, the XML listing works anonymously
+(`https://storage.googleapis.com/noaa-oar-gobai?prefix=netcdf/v202606/&delimiter=/`),
+and so does this:
+
+```python
+import gcsfs
+gcsfs.GCSFileSystem(token="anon").ls("noaa-oar-gobai/netcdf/v202606/o2")
+```
+
+Note that `https://storage.googleapis.com/noaa-oar-gobai/netcdf/v202606/o2/` —
+the plain prefix path — returns 404. That is not a permissions problem; that
+endpoint just does not do directory listings.
+
+Unlike RFROM's, these file names **do** sort chronologically: there is no
+stable/realtime infix, so the date in the name is the first thing that varies.
+
+### Reading from R
+
+R can read these files **without downloading them**. Appending `#mode=bytes` to
+the HTTPS URL makes netCDF fetch only the byte ranges it needs — measured on the
+hub against a 7.5 GB RFROM file on the identical grid: `nc_open` in 4.3 s, a 4×4
+slice in 0.9 s.
+
+```r
+install.packages("ncdf4")
+library(ncdf4)
+
+u <- paste0("https://storage.googleapis.com/noaa-oar-gobai/netcdf/v202606/o2/",
+            "GOBAI-O2-HR-v202606_1993-01-01_1994-11-25.nc#mode=bytes")
+nc <- nc_open(u)
+x  <- ncvar_get(nc, "o2", start = c(600, 300, 1, 1), count = c(4, 4, 1, 1))
+nc_close(nc)
+```
+
+Two things that bite:
+
+- **Dimension order is reversed** relative to Python:
+  `(longitude, latitude, mean_pressure, time)`. Getting this wrong returns data
+  rather than an error, so it fails silently.
+- **Byte-range is a netCDF-C build option** (`--enable-byterange`). Most builds
+  have it; if yours does not, `nc_open` fails with an unknown-file-format or
+  inaccessible-DAP message and the file must be downloaded first:
+
+```r
+u <- paste0("https://storage.googleapis.com/noaa-oar-gobai/netcdf/v202606/o2/",
+            "GOBAI-O2-HR-v202606_1993-01-01_1994-11-25.nc")
+download.file(u, "gobai.nc", mode = "wb")   # ~7.1 GB
+nc <- nc_open("gobai.nc")
+```
+
+  Files run 1.4–7.3 GB each, so avoid this where you can.
+
+`RNetCDF::open.nc()` streams the same way. There is no Icechunk reader for R, so
+the store is Python-only.
+
 ## Files in this directory
 
 ### Deliverables
@@ -88,11 +263,19 @@ stay honest about the product's pre-publication status.
   these. See "Running the batch script" below.
 - **`README.md`** — this file.
 
+- **`index.html`** — the public landing page, uploaded to
+  `gs://noaa-oar-gobai/index.html` and served at
+  <https://storage.googleapis.com/noaa-oar-gobai/index.html>. It documents what
+  is *in the bucket*, i.e. GOBAI HR-v1.0; the monthly GOBAI-O2 product appears
+  only as a pointer to its NCEI accession. Keep its code blocks in step with
+  ["Reading the published data"](#reading-the-published-data) above, and note
+  that it is CDN-cached for an hour — verify an upload with `?cb=$RANDOM` or a
+  stale copy reads as a failed upload.
+
 ### Unrelated to this pipeline
 
 - **`gobai-o2-monthly-icechunk-sc.ipynb`** — the GOBAI-O2 v2.3 monthly → Source
   Cooperative Icechunk build. A different product; see the note above.
-- **`index.html`** — landing page for that published product.
 
 ## Why one script for two products
 

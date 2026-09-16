@@ -404,10 +404,23 @@ def open_repo(cfg, local_repo=None, create=True, local_source_dir=None):
 
 
 def write_store(repo, ds, message):
-    """Write the virtual dataset and commit. Returns the snapshot id."""
+    """Write the virtual dataset and commit. Returns the snapshot id.
+
+    ``rebase_tries=0`` matters. Icechunk defaults it to 1000: on a conflict it
+    rebases and retries, which is right for concurrent writers and wrong here.
+    These builds are single-writer, so a "conflict" is never contention -- it is
+    a transient object-store failure that icechunk could not tell apart from one.
+    (GCS conditional writes cannot do lost-response recovery unless
+    ``unsafe_use_metadata`` is on, which icechunk warns about at startup.) With
+    the default, a single hiccup while updating the branch pointer turns into an
+    unbounded retry loop: the GOBAI HR build spun for an hour rewriting the ref
+    object on a growing backoff, never returning and never setting the branch,
+    while the snapshot it had already written sat unreferenced (issue #26). Fail
+    loudly instead.
+    """
     session = repo.writable_session("main")
     ds.vz.to_icechunk(session.store)
-    snapshot = session.commit(message)
+    snapshot = session.commit(message, rebase_tries=0)
     return snapshot
 
 
@@ -522,6 +535,13 @@ def build(store_name, local_repo=None, validate_after=True, workers=8):
     zarr.config.set({"async.concurrency": ZARR_CONCURRENCY})
     registry = source_registry(cfg["bucket"])
 
+    # Open the destination BEFORE the expensive part. Parsing 36 file headers
+    # takes ~12 minutes, and discovering a credentials or repository problem
+    # after that wastes the lot -- which is exactly what happened twice while
+    # building the GOBAI HR store (issue #26). Creating the repository is cheap
+    # and idempotent, so there is no reason to defer it to the write.
+    repo = open_repo(cfg, local_repo=local_repo)
+
     per_stream, coords_from = {}, None
     for stream, var in cfg["variables"].items():
         urls = list_stream_files(cfg, stream)
@@ -541,7 +561,6 @@ def build(store_name, local_repo=None, validate_after=True, workers=8):
 
     where = local_repo or f"gs://{cfg['bucket']}/{cfg['store_prefix']}"
     print(f"\nWriting {where}")
-    repo = open_repo(cfg, local_repo=local_repo)
     snapshot = write_store(repo, ds, f"{store_name}: virtual store over "
                                      f"{virtual_prefix(cfg)}")
     print(f"  committed {snapshot}")
@@ -554,6 +573,17 @@ def build(store_name, local_repo=None, validate_after=True, workers=8):
         # GroupNotFoundError against a store that is actually fine. Reopening is
         # also what "validate from the consumer read path" is supposed to mean.
         repo = open_repo(cfg, local_repo=local_repo, create=False)
+        # Check the branch pointer before reading anything through it. A commit
+        # that wrote its snapshot but failed to move the branch leaves main on
+        # the initial empty snapshot, and every read below then fails as an
+        # unhelpful GroupNotFoundError rather than naming what went wrong.
+        head = repo.lookup_branch("main")
+        if head != snapshot:
+            print(f"  FAIL: branch 'main' points at {head}, not the snapshot just "
+                  f"committed ({snapshot}).")
+            print("  The commit did not land. The snapshot's objects are written but "
+                  "unreferenced; rebuild into a clean store prefix.")
+            return 1
         if not validate(repo, cfg):
             return 1
     print(f"\nDone. {where}")
