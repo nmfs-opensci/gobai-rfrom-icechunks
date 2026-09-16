@@ -31,6 +31,7 @@ README has its stream table, metadata decisions and read examples:
 | `requirements.txt` | dependencies for `nodd.py` |
 | `requirements-icechunk.txt` | extra dependencies for `build_icechunk.py` |
 | `setup.md` | full environment setup (also `python nodd.py --setup`) |
+| `setup_bare_VM.txt` | the same setup as copy-paste commands for a fresh VM, through to the production runs |
 | `RFROMV/index.html`, `GOBAI-O2/index.html` | the public landing pages, uploaded to each bucket root |
 | `RFROMV/prep-one-netcdf-for-NODD.ipynb` | step-by-step walkthrough of one block — explains *why*, not needed to rebuild |
 | `RFROMV/icechunk-smoke-test.ipynb` | builds a small local store and checks it; run before a real store build |

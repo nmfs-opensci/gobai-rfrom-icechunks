@@ -210,6 +210,8 @@ one pressure plane at a time (~415 MB per chunk, a few in flight at once).
 
 ## More detail
 
+- [`setup_bare_VM.txt`](setup_bare_VM.txt) — this page as copy-paste commands for
+  a fresh VM, through to the production runs.
 - `python nodd.py --help` — every flag, with the full stream list and defaults.
 - [`RFROMV/README.md`](RFROMV/README.md) / [`GOBAI-O2/README.md`](GOBAI-O2/README.md)
   — per-product quickstart, stream tables, and CF metadata notes.

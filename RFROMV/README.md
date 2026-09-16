@@ -350,13 +350,6 @@ the store is Python-only.
 - **`../requirements.txt`** — pip dependencies for `nodd.py`; see
   ["Environment"](#environment) below.
 
-### Sandbox (exploratory scratch — not part of the pipeline)
-
-- **`setup_bare_VM.txt`** — Eli's personal cheat-sheet of shell commands for
-  standing up a bare VM. Informal by design and overlapping
-  [`../setup.md`](../setup.md), which is the maintained version; don't treat it
-  as the source of truth.
-
 ## Environment
 
 The pipeline needs Python, ~35 GB of scratch disk, and credentials that can
