@@ -3,7 +3,7 @@
 
 Covers two products that share a grid and therefore share this pipeline:
 
-  * **RFROM** gridded Argo temperature/salinity -- v2.3 (six streams), v2.2
+  * **RFROM** gridded Argo temperature/salinity -- v2.3 (temp, sal, temp_error, sal_error), v2.2
     (temp_v22, sal_v22) and v2.1 (temp_v21), to
     ``gs://noaa-oar-rfrom/netcdf/<version>/<stream>/`` (GitHub issues #1, #5, #20).
     v2.2/v2.1 are each a single continuous series -- no realtime/error split
@@ -38,26 +38,26 @@ range). The script therefore:
 Examples
 --------
     # Plan only: print the block -> monthly-file cross-walk, download nothing.
-    python nodd.py --stream temp_stable --list
+    python nodd.py --stream temp --list
 
     # Process a single block and upload it.
-    python nodd.py --stream temp_stable --blocks 0
+    python nodd.py --stream temp --blocks 0
 
-    # Split a stream across two VMs.
-    python nodd.py --stream sal_stable --blocks 0-8     # VM A
-    python nodd.py --stream sal_stable --blocks 9-16    # VM B
+    # Split a stream across two VMs (blocks are 0-17).
+    python nodd.py --stream sal --blocks 0-8      # VM A
+    python nodd.py --stream sal --blocks 9-17     # VM B
 
     # GOBAI oxygen, whole stream.
     python nodd.py --stream o2 --all
 
     # Whole stream, no upload (local test), keep the scratch files.
-    python nodd.py --stream temp_realtime --all --no-upload --keep-scratch
+    python nodd.py --stream temp_error --all --no-upload --keep-scratch
 
 Environment
 -----------
-The defaults assume the JupyterHub. Two paths are overridable so the script also
-runs on a bare VM or a laptop: ``NODD_SCRATCH_DIR`` (download + output scratch,
-needs ~35 GB free) and ``NODD_GCS_TOKEN`` (a credentials JSON path, or the
+Two paths are configurable: ``NODD_SCRATCH_DIR`` (download + output scratch,
+needs ~35 GB free; default ``~/rfromv-scratch`` or ``~/gobai-scratch`` by
+product) and ``NODD_GCS_TOKEN`` (a credentials JSON path, or the
 keyword "google_default" to resolve ADC the usual way). The older ``RFROM_``-
 prefixed names are still honoured. Run ``--setup`` (or see setup.md) for the
 venv + credentials walkthrough.
@@ -87,7 +87,7 @@ import gcsfs
 # Fixed configuration (stream-agnostic).                                       #
 # --------------------------------------------------------------------------- #
 
-BLOCK_SIZE = 100  # time steps per output file (the 1670-step stable record -> 17 blocks)
+BLOCK_SIZE = 100  # time steps per output file (a 1719-step record -> 18 blocks)
 
 # Physical (on-disk) chunk sizes, in variable dim order (time, mean_pressure,
 # latitude, longitude): 100 * 1 * 180 * 180 * 4 bytes ~= 12.96 MB per chunk.
@@ -112,7 +112,7 @@ PRODUCTS = {
     "rfrom": {
         "bucket": "noaa-oar-rfrom",
         "default_version": "v2.3",
-        "scratch_default": "/home/jovyan/shared-public/rfromv-scratch",
+        "scratch_default": "~/rfromv-scratch",
         "cf_refinements": False,
     },
     "gobai": {
@@ -121,28 +121,28 @@ PRODUCTS = {
         # ``title`` global attribute). ERDDAP's dataset title says "HR-v1.0"
         # instead; the files are the authority here.
         "default_version": "v202606",
-        "scratch_default": "/home/jovyan/shared-public/gobai-scratch",
+        "scratch_default": "~/gobai-scratch",
         "cf_refinements": True,
     },
 }
 
 # Scratch / local paths. erddap/ holds monthly source downloads; nodd/ holds the
-# assembled output files before upload. The default is the JupyterHub shared
-# volume and depends on the product, so these are resolved per run by
-# ``configure_paths()``; off-hub (bare VM, laptop) set NODD_SCRATCH_DIR to any
-# writable path with room for ~35 GB (one block's downloads plus its output).
+# assembled output files before upload. The default is in the home directory
+# and depends on the product, so these are resolved per run by
+# ``configure_paths()``. Set NODD_SCRATCH_DIR to put it on a disk with room for
+# ~35 GB (one block's downloads plus its output).
 SCRATCH_DIR = None
 DOWNLOAD_DIR = None
 OUTPUT_DIR = None
 
 # GCS_TOKEN is passed straight to gcsfs: either a path to a credentials JSON
-# (the default is where `gcloud auth application-default login` writes on the
-# hub) or a gcsfs token keyword -- "google_default" resolves ADC the normal way,
+# (the default is where `gcloud auth application-default login` writes it) or
+# a gcsfs token keyword -- "google_default" resolves ADC the normal way,
 # including GOOGLE_APPLICATION_CREDENTIALS. Override with NODD_GCS_TOKEN.
 GCS_TOKEN = (
     os.environ.get("NODD_GCS_TOKEN")
     or os.environ.get("RFROM_GCS_TOKEN")  # pre-#13 name, still honoured
-    or "/home/jovyan/.config/gcloud/application_default_credentials.json"
+    or "~/.config/gcloud/application_default_credentials.json"
 )
 if os.sep in GCS_TOKEN or GCS_TOKEN.startswith("~"):
     GCS_TOKEN = os.path.expanduser(GCS_TOKEN)
@@ -173,14 +173,14 @@ ERDDAP_GRIDDAP = "https://data.pmel.noaa.gov/pmel/erddap/griddap"
 # --------------------------------------------------------------------------- #
 # The streams. This dict is the ONE place stream differences live.            #
 #                                                                              #
-# --- RFROM v2.3 (six streams) ------------------------------------------------#
+# --- RFROM v2.3 (four streams) -----------------------------------------------#
 # All confirmed against ERDDAP 2026-09-02. Grid is (time, mean_pressure,       #
 # latitude, longitude) float32 with (mean_pressure, nv) mean_pressure_bnds for #
 # every stream. ``monthly_template`` matches the exact file names ERDDAP        #
 # serves (realtime files keep the STABLE prefix and append _REALTIME; error    #
 # files use an _ERROR_ infix and are a single continuous 1993->2025 series      #
-# with no realtime split). ``out_template`` mirrors that naming for the block   #
-# output files, with the block's first/last date substituted for {start}/{end}. #
+# with no realtime split). ``out_template`` names the block output files, with  #
+# the block's first/last date substituted for {start}/{end}.                    #
 #                                                                              #
 # standard_name notes:                                                          #
 #   * Temperature: source Description says "conservative temperature (TEOS-10)" #
@@ -204,28 +204,6 @@ REFERENCE_V23 = (
 )
 
 STREAMS = {
-    "temp_stable": {
-        "product": "rfrom",
-        "dataset_id": "argo_rfromv23_temp",
-        "data_var": "ocean_temperature",
-        "var_attrs": {
-            "standard_name": "sea_water_conservative_temperature",
-            "units": "degree_Celsius",
-        },
-        "monthly_template": "RFROMV23_TEMP_STABLE_{year}_{month:02d}.nc",
-        "out_template": "RFROMV23_TEMP_STABLE_{start}_{end}.nc",
-    },
-    "temp_realtime": {
-        "product": "rfrom",
-        "dataset_id": "argo_rfromv23_temp_realtime",
-        "data_var": "ocean_temperature",
-        "var_attrs": {
-            "standard_name": "sea_water_conservative_temperature",
-            "units": "degree_Celsius",
-        },
-        "monthly_template": "RFROMV23_TEMP_STABLE_{year}_{month:02d}_REALTIME.nc",
-        "out_template": "RFROMV23_TEMP_STABLE_{start}_{end}_REALTIME.nc",
-    },
     "temp_error": {
         "product": "rfrom",
         "dataset_id": "argo_rfromv23_temp_error",
@@ -243,7 +221,7 @@ STREAMS = {
         # argo_rfromv22_error is dimensioned on depth, i.e. the OHC anomaly
         # product (issue #21). Metadata only; no value is touched. The strings
         # below are copied byte-for-byte from the published sal_error and
-        # temp_stable files, en-dash and trailing space included.
+        # stable temp files, en-dash and trailing space included.
         "global_attrs": {
             "title": "RFROM v2.3",
             "references": REFERENCE_V23,
@@ -251,28 +229,6 @@ STREAMS = {
         "global_attrs_note": "GitHub issue #25",
         "monthly_template": "RFROMV23_TEMP_ERROR_{year}_{month:02d}.nc",
         "out_template": "RFROMV23_TEMP_ERROR_{start}_{end}.nc",
-    },
-    "sal_stable": {
-        "product": "rfrom",
-        "dataset_id": "argo_rfromv23_sal",
-        "data_var": "ocean_salinity",
-        "var_attrs": {
-            "standard_name": "sea_water_absolute_salinity",
-            "units": "grams_per_kilogram",
-        },
-        "monthly_template": "RFROMV23_SAL_STABLE_{year}_{month:02d}.nc",
-        "out_template": "RFROMV23_SAL_STABLE_{start}_{end}.nc",
-    },
-    "sal_realtime": {
-        "product": "rfrom",
-        "dataset_id": "argo_rfromv23_sal_realtime",
-        "data_var": "ocean_salinity",
-        "var_attrs": {
-            "standard_name": "sea_water_absolute_salinity",
-            "units": "grams_per_kilogram",
-        },
-        "monthly_template": "RFROMV23_SAL_STABLE_{year}_{month:02d}_REALTIME.nc",
-        "out_template": "RFROMV23_SAL_STABLE_{start}_{end}_REALTIME.nc",
     },
     "sal_error": {
         "product": "rfrom",
@@ -286,26 +242,22 @@ STREAMS = {
         "out_template": "RFROMV23_SAL_ERROR_{start}_{end}.nc",
     },
 
-    # --- RFROM v2.3 combined temp / sal (issue #17) ---------------------------- #
+    # --- RFROM v2.3 temp / sal (issue #17) ------------------------------------- #
     #
-    # The same weeks as temp_stable + temp_realtime, published as ONE continuous
-    # series instead of two, because the downstream Icechunk store cannot join
-    # them otherwise. PMEL splits the record because the 2025 weeks are still
+    # PMEL serves each variable as two ERDDAP datasets -- the settled record and
+    # a realtime extension. Each stream publishes them as ONE continuous series,
+    # because the downstream Icechunk store cannot join two separate series. PMEL splits the record because the 2025 weeks are still
     # provisional; that distinction is preserved in the Icechunk store as a
-    # data_mode(time) flag derived from ``realtime_start`` (see icechunk.py),
+    # data_mode(time) flag derived from ``realtime_start`` (see build_icechunk.py),
     # rather than by splitting the files.
     #
     # Why one series and not two: virtualizing a store means concatenating each
-    # file's chunk grid, and Zarr has no variable-length chunks. temp_stable ends
-    # mid-block (1670 steps = 16x100 + 70), so a merged temp array would need a
-    # 70-long chunk in the MIDDLE of its time axis -- illegal in Zarr no matter
-    # how the netCDFs are written. Merging the two records at the netCDF layer is
-    # what makes the store possible at all. See claude/notes/rfromv-icechunk.md.
-    #
-    # Blocks 0-15 (time steps 0-1599) are byte-for-byte the same data as
-    # temp_stable's blocks 0-15: same weeks, same monthly sources, same CF pass.
-    # Copy them across server-side rather than re-downloading ~200 GB from
-    # ERDDAP -- see "Restructuring an existing tree" in RFROMV/README.md.
+    # file's chunk grid, and Zarr has no variable-length chunks. The settled
+    # record ends mid-block (1670 steps = 16x100 + 70), so blocking it on its own
+    # would put a 70-long chunk in the MIDDLE of the merged time axis -- illegal
+    # in Zarr no matter how the netCDFs are written. Merging the two records at
+    # the netCDF layer is what makes the store possible at all. See
+    # claude/notes/rfromv-icechunk.md.
     "temp": {
         "product": "rfrom",
         "data_var": "ocean_temperature",
@@ -907,11 +859,11 @@ SETUP_MD = Path(__file__).resolve().parent / "setup.md"
 EPILOG = """\
 Examples
 --------
-  python nodd.py --stream temp_stable --list           plan only, no download
-  python nodd.py --stream temp_stable --blocks 0       one block, smoke-test
-  python nodd.py --stream temp_stable --all            production run, one VM
-  python nodd.py --stream sal_stable --blocks 0-8      VM A of a split stream
-  python nodd.py --stream sal_stable --blocks 9-16     VM B, disjoint range
+  python nodd.py --stream temp --list                  plan only, no download
+  python nodd.py --stream temp --blocks 0              one block, smoke-test
+  python nodd.py --stream temp --all                   production run, one VM
+  python nodd.py --stream sal --blocks 0-8             VM A of a split stream
+  python nodd.py --stream sal --blocks 9-17            VM B, disjoint range
   python nodd.py --stream temp_v22 --all               v2.2, version implied
   python nodd.py --stream o2 --all --no-upload --keep-scratch   local test run
 
@@ -933,9 +885,8 @@ def main(argv=None):
     p.add_argument("--stream", choices=sorted(STREAMS), default=None,
                    help="Product stream to process (one at a time). "
                         "RFROM v2.3: temp, sal (each one continuous "
-                        "stable+realtime series), temp_error, sal_error; "
-                        "temp_stable, temp_realtime, sal_stable, sal_realtime "
-                        "are the superseded split form. RFROM v2.2/v2.1: "
+                        "stable+realtime series), temp_error, sal_error. "
+                        "RFROM v2.2/v2.1: "
                         "temp_v22, sal_v22, temp_v21. GOBAI: o2, no3. Required "
                         "unless --setup is given.")
     grp = p.add_mutually_exclusive_group()
@@ -959,7 +910,7 @@ def main(argv=None):
     p.add_argument("--keep-scratch", action="store_true",
                    help="Do not delete downloaded monthly files / local outputs.")
     p.add_argument("--setup", action="store_true",
-                   help="Print the full off-hub setup walkthrough (setup.md) and exit: "
+                   help="Print the full setup walkthrough (setup.md) and exit: "
                         "Python env, scratch disk, GCS credentials, long-run tips.")
     args = p.parse_args(argv)
 
@@ -997,8 +948,7 @@ def main(argv=None):
     # surfaces on the first file open, i.e. after a block has been downloaded.
     check_netcdf_engine(p)
 
-    # Report the resolved scratch dir BEFORE creating it: if NODD_SCRATCH_DIR is
-    # unset off-hub this falls back to the hub path, and the failure should name it.
+    # Report the resolved scratch dir BEFORE creating it, so a failure names it.
     print(f"Scratch: {SCRATCH_DIR}")
     try:
         os.makedirs(DOWNLOAD_DIR, exist_ok=True)
@@ -1007,7 +957,7 @@ def main(argv=None):
         p.error(
             f"cannot create scratch directory {SCRATCH_DIR}: {exc}\n"
             "Set NODD_SCRATCH_DIR to a writable path with ~35 GB free "
-            "(the default is the JupyterHub location)."
+            "(the default is in your home directory)."
         )
 
     do_upload = not args.no_upload

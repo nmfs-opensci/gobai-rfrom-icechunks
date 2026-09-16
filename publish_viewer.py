@@ -39,7 +39,7 @@ Steps
    touches anything outside ``gs://<bucket>/<prefix>/``.
 
 Why the build is not ``npm run build``: that runs ``vue-tsc`` and writes
-source maps, and on the JupyterHub (container capped at ~1.9 GB) it is
+source maps, and on a small machine (tested with a ~1.9 GB memory cap) it is
 OOM-killed. ``vite build --sourcemap false`` with a capped Node heap fits,
 builds in under a minute, and halves the upload (≈23 MB). Type checking belongs
 to gridlook's own CI, not to publishing.
@@ -51,8 +51,9 @@ have deleted). Files under ``assets/`` carry a content hash in their names and a
 cached for a year. Everything else gets a five-minute cache.
 
 Credentials: same mechanism as ``nodd.py`` -- ``NODD_GCS_TOKEN`` (a credentials
-JSON path, or ``google_default``), falling back to the hub's
-application-default credentials file. The bucket must already be publicly
+JSON path, or ``google_default``), falling back to the
+application-default credentials file that ``gcloud auth application-default
+login`` writes. The bucket must already be publicly
 readable; this script sets no ACLs.
 """
 
@@ -88,7 +89,7 @@ PUBLIC = "https://storage.googleapis.com"
 
 GCS_TOKEN = (
     os.environ.get("NODD_GCS_TOKEN")
-    or "/home/jovyan/.config/gcloud/application_default_credentials.json"
+    or "~/.config/gcloud/application_default_credentials.json"
 )
 if os.sep in GCS_TOKEN or GCS_TOKEN.startswith("~"):
     GCS_TOKEN = os.path.expanduser(GCS_TOKEN)

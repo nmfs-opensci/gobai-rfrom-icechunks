@@ -124,7 +124,7 @@ DATA_MODE_ATTRS = {
 GCS_TOKEN = (
     os.environ.get("NODD_GCS_TOKEN")
     or os.environ.get("RFROM_GCS_TOKEN")
-    or "/home/jovyan/.config/gcloud/application_default_credentials.json"
+    or "~/.config/gcloud/application_default_credentials.json"
 )
 if os.sep in GCS_TOKEN or GCS_TOKEN.startswith("~"):
     GCS_TOKEN = os.path.expanduser(GCS_TOKEN)
@@ -382,6 +382,12 @@ def open_repo(cfg, local_repo=None, create=True, local_source_dir=None):
 
     if local_repo:
         storage = ic.local_filesystem_storage(local_repo)
+    elif GCS_TOKEN == "google_default":
+        # gcsfs's keyword for "find ADC yourself". Icechunk would read it as a file
+        # path; its equivalent is from_env (GOOGLE_APPLICATION_CREDENTIALS, the
+        # gcloud ADC file, or the GCE metadata server).
+        storage = ic.gcs_storage(bucket=cfg["bucket"], prefix=cfg["store_prefix"],
+                                 from_env=True)
     else:
         storage = ic.gcs_storage(bucket=cfg["bucket"], prefix=cfg["store_prefix"],
                                  application_credentials=GCS_TOKEN)
@@ -614,7 +620,9 @@ def main(argv=None):
 
     print(f"Store: {args.store}")
     print(f"Source: {virtual_prefix(cfg)}")
-    print(f"Destination: {args.local_repo or f'gs://{cfg["bucket"]}/{cfg["store_prefix"]}'}\n")
+    # No nested same-type quotes inside the f-string: that needs Python 3.12.
+    destination = args.local_repo or f"gs://{cfg['bucket']}/{cfg['store_prefix']}"
+    print(f"Destination: {destination}\n")
 
     if args.list:
         plan(cfg)

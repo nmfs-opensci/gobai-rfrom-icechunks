@@ -81,3 +81,53 @@ as `eeholmes/claude-config#1`, which also warns against re-running
 - **#16** gave `nodd.py` an `--help` epilog and a `--setup` that prints the
   root-level `setup.md`; removed the `rfrom_nodd.py` shim; moved
   `requirements.txt` to the repo root; dropped pixi/conda for venv+pip only.
+
+## RFROM v2.3: six streams → four (issue #17, done 2026-09-04)
+
+RFROM v2.3 was first published as **six** streams: `temp_stable`,
+`temp_realtime`, `sal_stable`, `sal_realtime`, `temp_error` and `sal_error`.
+Stable and realtime were kept in separate prefixes so the weekly realtime churn
+would never touch the stable archive. That split made a virtual Icechunk store
+impossible. The stable record is 1670 steps (16 × 100 + 70), so joining the two
+series in a store would put a 70-long chunk in the **middle** of the time axis,
+and Zarr has no variable-length chunks. The fix moved the join to the netCDF
+layer: `temp` and `sal` each list both ERDDAP datasets as `sources` and are
+blocked as one 1719-step series. Which weeks are provisional moved from the
+directory layout into the store's `data_mode` flag.
+
+How it was done: `RFROMV/migrate_v23.py` server-side-copied blocks 0–15 (the
+same weeks from the same sources, so byte-identical: 32 objects, 219 GB, about 15 s
+with gcsfs rewrites), and blocks 16–17 were rebuilt from ERDDAP. The script
+then CRC-checked everything before the four old prefixes (36 objects,
+225.5 GB) were deleted. The deletion is permanent, since the bucket has no
+soft-delete or versioning. Every step is in `rfromv-icechunk.md` §6.
+
+Removed afterwards (PR #32, 2026-09-16), once the bucket held only the four
+current prefixes: the four superseded `STREAMS` entries, `migrate_v23.py`
+(which read them), and the README sections on the migration and on retiring
+the old prefixes. `nodd-batch-script.md` and `nodd-prep.md` still describe the
+six-stream design as it was built.
+
+The old mode *suffix* (`..._STABLE_<dates>_REALTIME.nc`) became an infix
+(`..._STABLE_REALTIME_<dates>.nc` for the seam block, `..._REALTIME_...` for the
+tail). ERDDAP's own monthly realtime files still use the suffix form, which is
+why `monthly_template` keeps it.
+
+## Hub-free defaults and a lock file (PR #32, 2026-09-16)
+
+The pipeline normally runs on a VM or laptop, so the defaults stopped pointing
+at the hub. Scratch now defaults to `~/rfromv-scratch` / `~/gobai-scratch`
+(previously `/home/jovyan/shared-public/...`), and credentials to
+`~/.config/gcloud/application_default_credentials.json`. **Set
+`NODD_SCRATCH_DIR` on the hub to keep using `shared-public`.**
+
+`requirements.lock` (with `constraints.txt`) pins the environment for Python
+3.12, using the versions the RFROM v2.3 store was built with. The test record is
+in `reproducibility-review.md`. Also fixed in that PR:
+
+- `build_icechunk.py` used a 3.12-only f-string, although 3.11 was documented;
+- it passed `NODD_GCS_TOKEN=google_default` to Icechunk as a file path. Icechunk
+  needs `from_env=True` for that; gcsfs understands the keyword, so `nodd.py`
+  was never affected. The fix was verified with `--store gobai_hr --validate`.
+- `setup_bare_VM.txt` moved to the repo root and became maintained, where before
+  it was a personal cheat-sheet not to touch.
