@@ -18,8 +18,13 @@ ERDDAP monthly netCDFs
   → upload to gs://noaa-oar-rfrom/netcdf/<version>/<stream>/
 ```
 
-The 1670-step stable record splits into 17 blocks; output files are named e.g.
-`RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc`.
+The 1719-step v2.3 record splits into 18 blocks (17 × 100 + a 19-step tail);
+output files are named e.g. `RFROMV23_TEMP_STABLE_1993-01-01_1994-11-25.nc`
+(see ["File names"](#file-names)).
+
+To rebuild everything from scratch, follow
+["Rebuilding from scratch"](../README.md#rebuilding-from-scratch) in the root
+README.
 
 **For consumers**, the public landing page is
 <https://storage.googleapis.com/noaa-oar-rfrom/index.html> — it carries the
@@ -32,12 +37,11 @@ below mirrors what the page says.
 These are the current **v2.3** products, published under `netcdf/v2.3/` in the
 bucket. `temp` and `sal` each publish **one continuous series** spanning both of
 PMEL's ERDDAP datasets — the settled record plus the realtime extension that
-continues it. They replace the four `*_stable` / `*_realtime` streams, which
-published the same weeks as two separate series; that split made a virtual
-Icechunk store impossible (issue #17, and "Restructuring the v2.3 tree" below).
-Which weeks are provisional is recorded in the Icechunk store's `data_mode` flag
-rather than in the file layout. New versions reprocess all data into a new `netcdf/<version>/` tree; the
-script's `--version` flag (default `v2.3`) sets the prefix. Each ERDDAP
+continues it. Publishing them as two separate series would make a virtual
+Icechunk store impossible (issue #17), so which weeks are provisional is
+recorded in the Icechunk store's `data_mode` flag rather than in the file
+layout. New versions reprocess all data into a new `netcdf/<version>/` tree;
+the script's `--version` flag (default `v2.3`) sets the prefix. Each ERDDAP
 dataset_id below links to its griddap data-access page.
 
 | stream | ERDDAP dataset(s) | data variable | units | steps |
@@ -51,14 +55,10 @@ All four run 1993-01-01 → 2025-12-05 weekly, 18 blocks (17 × 100 + 19). The 2
 weeks are provisional and will be reprocessed into the settled record; that is
 what `data_mode` marks in the Icechunk store.
 
-The superseded streams `temp_stable`, `temp_realtime`, `sal_stable` and
-`sal_realtime` are still defined in `nodd.py` — they built the tree that is
-published today, and the entries are what the migration copies from.
-
 † `ocean_salinity` is **absolute salinity (TEOS-10) in g/kg**, confirmed by the
 data author. ERDDAP labels the variable `sea_water_practical_salinity` / `PSU`,
 but that is a known upstream mistake the author cannot fix, so the pipeline
-overrides `sal_stable` / `sal_realtime` to `sea_water_absolute_salinity` /
+overrides `sal` (and `sal_v22`) to `sea_water_absolute_salinity` /
 `grams_per_kilogram` — **metadata only, values unchanged**.
 
 ## v2.2 and v2.1 (GitHub issue #20)
@@ -83,47 +83,10 @@ anomaly, on a different, coarser vertical grid (`mean_depth`, 10 levels, vs.
 temp/sal's `mean_pressure`, 58 levels) — not variants of temperature/salinity.
 Tracked separately as [issue #21](https://github.com/nmfs-opensci/gobai-rfrom-icechunks/issues/21).
 
-## Restructuring the v2.3 tree (issue #17)
+## File names
 
-The published tree has to move from six streams to four before the Icechunk store
-can be built. **Blocks 0–15 do not need rebuilding** — they are the same weeks
-from the same monthly sources, so they are copied server-side inside the bucket
-rather than re-downloaded (~200 GB of ERDDAP traffic saved). Only the seam and the
-tails are new work: about 16 GB downloaded, 19 GB written.
-
-```sh
-# 1. Copy blocks 0-15 of temp and sal to the new prefixes. Server-side rewrite:
-#    no bytes cross the network, and each object is CRC-verified as it lands.
-#    Idempotent -- an object already present with a matching CRC is skipped.
-#    (--plan first if you want to see what it will do.)
-python RFROMV/migrate_v23.py --copy
-
-# 2. Build the two new blocks per variable: block 16 spans the stable/realtime
-#    seam, block 17 is the padded 19-step tail.
-python nodd.py --stream temp --blocks 16,17
-python nodd.py --stream sal  --blocks 16,17
-
-# 3. Rewrite the error tails so their time chunk is 100 rather than 19.
-python nodd.py --stream temp_error --blocks 17 --force
-python nodd.py --stream sal_error  --blocks 17 --force
-
-# 4. Verify before deleting anything: every block the plan expects is present,
-#    and every object carried over is byte-identical to its source (CRC32C,
-#    metadata only -- nothing is downloaded). Exits non-zero if not.
-python RFROMV/migrate_v23.py --check
-```
-
-Step 1 uses `gcsfs`, not `gcloud storage`: gcsfs authenticates with the
-application-default credentials this repo already uses, while the gcloud CLI
-wants its own `gcloud auth login` — on the hub `gcloud auth list` reports no
-credentialed accounts. gcsfs issues a GCS rewrite and loops on the rewrite token
-until the server says done, so multi-GB objects copy correctly without being
-downloaded. Measured: **32 objects, 219 GB, ~15 seconds.**
-
-### File names
-
-The four directories are `temp/`, `sal/`, `temp_error/` and `sal_error/`. Inside
-`temp/` and `sal/` the file name says what the file actually holds:
+The four v2.3 directories are `temp/`, `sal/`, `temp_error/` and `sal_error/`.
+Inside `temp/` and `sal/` the file name says what the file actually holds:
 
 | block | contents | name |
 |---|---|---|
@@ -131,58 +94,31 @@ The four directories are `temp/`, `sal/`, `temp_error/` and `sal_error/`. Inside
 | 16 | 70 settled + 30 provisional | `RFROMV23_TEMP_STABLE_REALTIME_2023-09-01_2025-07-25.nc` |
 | 17 | all provisional | `RFROMV23_TEMP_REALTIME_2025-08-01_2025-12-05.nc` |
 
-The seam block carries **both** labels, in the order it meets them. Pure-stable
-blocks keep the name they already have, which is why step 1 above is a plain copy.
-The old `_REALTIME` *suffix* (on files whose name also said `STABLE`) is gone —
-the label is now an infix and means what it says.
+The seam block carries **both** labels, in the order it meets them. The error
+streams have no settled/provisional split and use an `_ERROR_` infix
+(`RFROMV23_TEMP_ERROR_<start>_<end>.nc`).
 
 Two consequences worth knowing:
 
-- **Lexical order is no longer time order** — `REALTIME` sorts before `STABLE`.
+- **Lexical order is not time order** — `REALTIME` sorts before `STABLE`.
   `build_icechunk.py` sorts on the dates in the name (`block_start`), and the
   store's own concatenation orders by the files' real time values, so neither is
   fooled; a hand-written `ls | sort` would be.
 - **Names churn when provisional weeks are settled.** When PMEL promotes 2025
   into the settled record, block 16 becomes all-stable and is rebuilt as
   `..._STABLE_2023-09-01_2025-07-25.nc`; the `STABLE_REALTIME` object is then
-  stale and should be deleted. That is the cost of putting the mode in the name;
-  the machine-readable version of the same fact is `data_mode` in the Icechunk
-  store, which never churns.
+  stale and should be deleted, and the Icechunk store rebuilt. The
+  machine-readable version of the same fact is `data_mode` in the Icechunk
+  store.
 
-### Retiring the old prefixes
+## Updating the record
 
-GCS has no rename, so the four old directories (`temp_stable`, `temp_realtime`,
-`sal_stable`, `sal_realtime` — 225.5 GB) survive the copy and have to be deleted
-deliberately. Two things make that safe here:
-
-- **The public landing page does not link to them.** Its stream links point at the
-  ERDDAP source datasets (`data.pmel.noaa.gov/.../argo_rfromv23_temp_realtime/`),
-  which are unaffected; the page never references a `netcdf/` path.
-- **They were only published on 2026-09-02/03**, so nothing has had time to link
-  to them. That argument weakens the longer they stay up — this is the cheapest
-  moment to retire them.
-
-Nothing is lost. Three objects are *not* copied — the 70-step stable block 16 and
-the two realtime files — because the rebuilt blocks 16 and 17 contain exactly
-those weeks, re-blocked.
-
-```sh
-python RFROMV/migrate_v23.py --check   # must exit 0
-python build_icechunk.py --store rfrom_v23 --local-repo /tmp/rehearsal   # must validate
-
-for d in temp_stable temp_realtime sal_stable sal_realtime; do
-  gcloud storage rm --recursive "gs://noaa-oar-rfrom/netcdf/v2.3/$d"
-done
-```
-
-Do not run the delete until both checks above pass. If something is wrong
-afterwards, everything is rebuildable from ERDDAP — but that is a multi-hour
-re-run, which is what the checks exist to avoid.
-
-**Weekly realtime updates** rewrite only the tail block (`--blocks 17 --force`,
-~1.5 GB) until it reaches 100 steps, at which point it becomes a full block and a
-new tail starts. When PMEL promotes the 2025 weeks into the settled record,
-rebuild blocks 16–17 and move `realtime_start` in `build_icechunk.py`.
+**Weekly realtime updates** rewrite only the tail block
+(`python nodd.py --stream temp --blocks 17 --force`, ~1.5 GB) until it reaches
+100 steps, at which point it becomes a full block and a new tail starts. When
+PMEL promotes the 2025 weeks into the settled record, rebuild blocks 16–17,
+move `realtime_start` in `build_icechunk.py`, and rebuild the store. Neither is
+automated yet (see "Not yet built" below).
 
 ## The Icechunk store
 
@@ -377,15 +313,15 @@ the store is Python-only.
 
 ### Deliverables
 
-- **`../nodd.py`** — the batch script (GitHub issue #5). Processes any of the six
-  streams into NODD netCDFs and uploads them. This is what you run in production.
+- **`../nodd.py`** — the batch script (GitHub issue #5). Processes any of the
+  RFROM streams above into NODD netCDFs and uploads them. This is what you run in production.
   It lives at the repository root because GOBAI HR shares RFROM's grid and
   therefore this pipeline (issue #13); see [`../GOBAI-O2/README.md`](../GOBAI-O2/README.md).
   See "Running the batch script" below.
 - **`prep-one-netcdf-for-NODD.ipynb`** — the tested single-file reference pipeline
   (GitHub issue #1, merged via PR #4). Run interactively cell-by-cell; it prepares
   and uploads **one** block so the workflow can be validated before scaling up.
-  `nodd.py` is this notebook generalized to all six streams — the notebook
+  `nodd.py` is this notebook generalized to every stream — the notebook
   remains the readable, step-annotated explanation of *why* each stage is the way
   it is.
 - **`../publish_viewer.py`** — builds the gridlook viewer and uploads it to
@@ -396,12 +332,6 @@ the store is Python-only.
 - **`icechunk-smoke-test.ipynb`** — run this before building the real store, and
   after any change to `build_icechunk.py`. Builds a small store into a local
   temporary repository and validates it against the source netCDFs.
-- **`migrate_v23.py`** — one-off tool for the issue #17 restructure. `--plan`
-  shows which blocks are copied and which must be built; `--copy` does the
-  server-side copy; `--check` confirms the new tree is complete and every copied
-  object matches its source by CRC32C, before the old prefixes are deleted. Takes
-  its block plan straight from `nodd.py`, so the two cannot drift. Can be deleted
-  once the migration is done.
 - **`index.html`** — landing page for the published product, and the source of
   `gs://noaa-oar-rfrom/index.html`, live at
   <https://storage.googleapis.com/noaa-oar-rfrom/index.html>. Carries the cloud-access instructions:
@@ -426,10 +356,6 @@ the store is Python-only.
   standing up a bare VM. Informal by design and overlapping
   [`../setup.md`](../setup.md), which is the maintained version; don't treat it
   as the source of truth.
-
-(The earlier exploratory notebooks, `prep-for-NODD-rfromv23.ipynb` and
-`upload_to_nodd.ipynb`, are gone — issue #15. Anything worth keeping from them
-was merged into `prep-one-netcdf-for-NODD.ipynb`.)
 
 ## Environment
 
@@ -483,21 +409,27 @@ files already finished are untouched.
 
 ```sh
 # Plan only: print the block → monthly-file cross-walk, download nothing.
-python nodd.py --stream temp_stable --list
+python nodd.py --stream temp --list
+
+# Smoke-test one block end to end. Block 17 is the cheapest (19 steps, 5 files).
+python nodd.py --stream temp --blocks 17 --no-upload --keep-scratch
 
 # Process a single block and upload it.
-python nodd.py --stream temp_stable --blocks 0
+python nodd.py --stream temp --blocks 0
 
 # Process EVERY block in the stream and upload them (a typical production run,
 # one stream per VM). Idempotent: already-uploaded blocks are skipped.
-python nodd.py --stream temp_stable --all
+python nodd.py --stream temp --all
+python nodd.py --stream sal --all
+python nodd.py --stream temp_error --all
+python nodd.py --stream sal_error --all
 
-# Split a stream across two VMs (disjoint block ranges).
-python nodd.py --stream sal_stable --blocks 0-8      # VM A
-python nodd.py --stream sal_stable --blocks 9-16     # VM B
+# Split a stream across two VMs (disjoint block ranges, 0-17).
+python nodd.py --stream sal --blocks 0-8      # VM A
+python nodd.py --stream sal --blocks 9-17     # VM B
 
-# Whole stream, local test — build but don't upload, keep scratch files.
-python nodd.py --stream temp_realtime --all --no-upload --keep-scratch
+# Older versions: the stream sets its own version prefix.
+python nodd.py --stream temp_v22 --all
 ```
 
 ### Flags

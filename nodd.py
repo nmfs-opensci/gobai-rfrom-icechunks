@@ -3,7 +3,7 @@
 
 Covers two products that share a grid and therefore share this pipeline:
 
-  * **RFROM** gridded Argo temperature/salinity -- v2.3 (six streams), v2.2
+  * **RFROM** gridded Argo temperature/salinity -- v2.3 (temp, sal, temp_error, sal_error), v2.2
     (temp_v22, sal_v22) and v2.1 (temp_v21), to
     ``gs://noaa-oar-rfrom/netcdf/<version>/<stream>/`` (GitHub issues #1, #5, #20).
     v2.2/v2.1 are each a single continuous series -- no realtime/error split
@@ -38,20 +38,20 @@ range). The script therefore:
 Examples
 --------
     # Plan only: print the block -> monthly-file cross-walk, download nothing.
-    python nodd.py --stream temp_stable --list
+    python nodd.py --stream temp --list
 
     # Process a single block and upload it.
-    python nodd.py --stream temp_stable --blocks 0
+    python nodd.py --stream temp --blocks 0
 
-    # Split a stream across two VMs.
-    python nodd.py --stream sal_stable --blocks 0-8     # VM A
-    python nodd.py --stream sal_stable --blocks 9-16    # VM B
+    # Split a stream across two VMs (blocks are 0-17).
+    python nodd.py --stream sal --blocks 0-8      # VM A
+    python nodd.py --stream sal --blocks 9-17     # VM B
 
     # GOBAI oxygen, whole stream.
     python nodd.py --stream o2 --all
 
     # Whole stream, no upload (local test), keep the scratch files.
-    python nodd.py --stream temp_realtime --all --no-upload --keep-scratch
+    python nodd.py --stream temp_error --all --no-upload --keep-scratch
 
 Environment
 -----------
@@ -87,7 +87,7 @@ import gcsfs
 # Fixed configuration (stream-agnostic).                                       #
 # --------------------------------------------------------------------------- #
 
-BLOCK_SIZE = 100  # time steps per output file (the 1670-step stable record -> 17 blocks)
+BLOCK_SIZE = 100  # time steps per output file (a 1719-step record -> 18 blocks)
 
 # Physical (on-disk) chunk sizes, in variable dim order (time, mean_pressure,
 # latitude, longitude): 100 * 1 * 180 * 180 * 4 bytes ~= 12.96 MB per chunk.
@@ -173,14 +173,14 @@ ERDDAP_GRIDDAP = "https://data.pmel.noaa.gov/pmel/erddap/griddap"
 # --------------------------------------------------------------------------- #
 # The streams. This dict is the ONE place stream differences live.            #
 #                                                                              #
-# --- RFROM v2.3 (six streams) ------------------------------------------------#
+# --- RFROM v2.3 (four streams) -----------------------------------------------#
 # All confirmed against ERDDAP 2026-09-02. Grid is (time, mean_pressure,       #
 # latitude, longitude) float32 with (mean_pressure, nv) mean_pressure_bnds for #
 # every stream. ``monthly_template`` matches the exact file names ERDDAP        #
 # serves (realtime files keep the STABLE prefix and append _REALTIME; error    #
 # files use an _ERROR_ infix and are a single continuous 1993->2025 series      #
-# with no realtime split). ``out_template`` mirrors that naming for the block   #
-# output files, with the block's first/last date substituted for {start}/{end}. #
+# with no realtime split). ``out_template`` names the block output files, with  #
+# the block's first/last date substituted for {start}/{end}.                    #
 #                                                                              #
 # standard_name notes:                                                          #
 #   * Temperature: source Description says "conservative temperature (TEOS-10)" #
@@ -204,28 +204,6 @@ REFERENCE_V23 = (
 )
 
 STREAMS = {
-    "temp_stable": {
-        "product": "rfrom",
-        "dataset_id": "argo_rfromv23_temp",
-        "data_var": "ocean_temperature",
-        "var_attrs": {
-            "standard_name": "sea_water_conservative_temperature",
-            "units": "degree_Celsius",
-        },
-        "monthly_template": "RFROMV23_TEMP_STABLE_{year}_{month:02d}.nc",
-        "out_template": "RFROMV23_TEMP_STABLE_{start}_{end}.nc",
-    },
-    "temp_realtime": {
-        "product": "rfrom",
-        "dataset_id": "argo_rfromv23_temp_realtime",
-        "data_var": "ocean_temperature",
-        "var_attrs": {
-            "standard_name": "sea_water_conservative_temperature",
-            "units": "degree_Celsius",
-        },
-        "monthly_template": "RFROMV23_TEMP_STABLE_{year}_{month:02d}_REALTIME.nc",
-        "out_template": "RFROMV23_TEMP_STABLE_{start}_{end}_REALTIME.nc",
-    },
     "temp_error": {
         "product": "rfrom",
         "dataset_id": "argo_rfromv23_temp_error",
@@ -243,7 +221,7 @@ STREAMS = {
         # argo_rfromv22_error is dimensioned on depth, i.e. the OHC anomaly
         # product (issue #21). Metadata only; no value is touched. The strings
         # below are copied byte-for-byte from the published sal_error and
-        # temp_stable files, en-dash and trailing space included.
+        # stable temp files, en-dash and trailing space included.
         "global_attrs": {
             "title": "RFROM v2.3",
             "references": REFERENCE_V23,
@@ -251,28 +229,6 @@ STREAMS = {
         "global_attrs_note": "GitHub issue #25",
         "monthly_template": "RFROMV23_TEMP_ERROR_{year}_{month:02d}.nc",
         "out_template": "RFROMV23_TEMP_ERROR_{start}_{end}.nc",
-    },
-    "sal_stable": {
-        "product": "rfrom",
-        "dataset_id": "argo_rfromv23_sal",
-        "data_var": "ocean_salinity",
-        "var_attrs": {
-            "standard_name": "sea_water_absolute_salinity",
-            "units": "grams_per_kilogram",
-        },
-        "monthly_template": "RFROMV23_SAL_STABLE_{year}_{month:02d}.nc",
-        "out_template": "RFROMV23_SAL_STABLE_{start}_{end}.nc",
-    },
-    "sal_realtime": {
-        "product": "rfrom",
-        "dataset_id": "argo_rfromv23_sal_realtime",
-        "data_var": "ocean_salinity",
-        "var_attrs": {
-            "standard_name": "sea_water_absolute_salinity",
-            "units": "grams_per_kilogram",
-        },
-        "monthly_template": "RFROMV23_SAL_STABLE_{year}_{month:02d}_REALTIME.nc",
-        "out_template": "RFROMV23_SAL_STABLE_{start}_{end}_REALTIME.nc",
     },
     "sal_error": {
         "product": "rfrom",
@@ -286,26 +242,22 @@ STREAMS = {
         "out_template": "RFROMV23_SAL_ERROR_{start}_{end}.nc",
     },
 
-    # --- RFROM v2.3 combined temp / sal (issue #17) ---------------------------- #
+    # --- RFROM v2.3 temp / sal (issue #17) ------------------------------------- #
     #
-    # The same weeks as temp_stable + temp_realtime, published as ONE continuous
-    # series instead of two, because the downstream Icechunk store cannot join
-    # them otherwise. PMEL splits the record because the 2025 weeks are still
+    # PMEL serves each variable as two ERDDAP datasets -- the settled record and
+    # a realtime extension. Each stream publishes them as ONE continuous series,
+    # because the downstream Icechunk store cannot join two separate series. PMEL splits the record because the 2025 weeks are still
     # provisional; that distinction is preserved in the Icechunk store as a
-    # data_mode(time) flag derived from ``realtime_start`` (see icechunk.py),
+    # data_mode(time) flag derived from ``realtime_start`` (see build_icechunk.py),
     # rather than by splitting the files.
     #
     # Why one series and not two: virtualizing a store means concatenating each
-    # file's chunk grid, and Zarr has no variable-length chunks. temp_stable ends
-    # mid-block (1670 steps = 16x100 + 70), so a merged temp array would need a
-    # 70-long chunk in the MIDDLE of its time axis -- illegal in Zarr no matter
-    # how the netCDFs are written. Merging the two records at the netCDF layer is
-    # what makes the store possible at all. See claude/notes/rfromv-icechunk.md.
-    #
-    # Blocks 0-15 (time steps 0-1599) are byte-for-byte the same data as
-    # temp_stable's blocks 0-15: same weeks, same monthly sources, same CF pass.
-    # Copy them across server-side rather than re-downloading ~200 GB from
-    # ERDDAP -- see "Restructuring an existing tree" in RFROMV/README.md.
+    # file's chunk grid, and Zarr has no variable-length chunks. The settled
+    # record ends mid-block (1670 steps = 16x100 + 70), so blocking it on its own
+    # would put a 70-long chunk in the MIDDLE of the merged time axis -- illegal
+    # in Zarr no matter how the netCDFs are written. Merging the two records at
+    # the netCDF layer is what makes the store possible at all. See
+    # claude/notes/rfromv-icechunk.md.
     "temp": {
         "product": "rfrom",
         "data_var": "ocean_temperature",
@@ -907,11 +859,11 @@ SETUP_MD = Path(__file__).resolve().parent / "setup.md"
 EPILOG = """\
 Examples
 --------
-  python nodd.py --stream temp_stable --list           plan only, no download
-  python nodd.py --stream temp_stable --blocks 0       one block, smoke-test
-  python nodd.py --stream temp_stable --all            production run, one VM
-  python nodd.py --stream sal_stable --blocks 0-8      VM A of a split stream
-  python nodd.py --stream sal_stable --blocks 9-16     VM B, disjoint range
+  python nodd.py --stream temp --list                  plan only, no download
+  python nodd.py --stream temp --blocks 0              one block, smoke-test
+  python nodd.py --stream temp --all                   production run, one VM
+  python nodd.py --stream sal --blocks 0-8             VM A of a split stream
+  python nodd.py --stream sal --blocks 9-17            VM B, disjoint range
   python nodd.py --stream temp_v22 --all               v2.2, version implied
   python nodd.py --stream o2 --all --no-upload --keep-scratch   local test run
 
@@ -933,9 +885,8 @@ def main(argv=None):
     p.add_argument("--stream", choices=sorted(STREAMS), default=None,
                    help="Product stream to process (one at a time). "
                         "RFROM v2.3: temp, sal (each one continuous "
-                        "stable+realtime series), temp_error, sal_error; "
-                        "temp_stable, temp_realtime, sal_stable, sal_realtime "
-                        "are the superseded split form. RFROM v2.2/v2.1: "
+                        "stable+realtime series), temp_error, sal_error. "
+                        "RFROM v2.2/v2.1: "
                         "temp_v22, sal_v22, temp_v21. GOBAI: o2, no3. Required "
                         "unless --setup is given.")
     grp = p.add_mutually_exclusive_group()

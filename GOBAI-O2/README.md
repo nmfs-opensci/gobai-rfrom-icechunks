@@ -39,7 +39,7 @@ files are named e.g. `GOBAI-O2-HR-v202606_1993-01-01_1994-11-25.nc`.
 
 Both run 1993-01-01 → 2025-12-05, weekly, 1719 steps, 396 monthly source files,
 ~0.41 TB per stream. There is **no stable/realtime/error split** — one stream per
-variable, unlike RFROM's six.
+variable, unlike RFROM's settled/realtime/error streams.
 
 ### Version string
 
@@ -103,10 +103,9 @@ read that rather than rediscovering them. Two differences from RFROM:
 
 - **No `data_mode` coordinate.** GOBAI HR has no stable/realtime split, so
   `realtime_start` is `None` and no mode flag is written. RFROM's store has one
-  because half its record is provisional.
-- **Nothing to migrate.** The tree was published as one continuous series per
-  variable from the start, so there is no equivalent of RFROM's `migrate_v23.py`
-  and no old prefixes to retire.
+  because its 2025 weeks are provisional.
+- **Plain file names.** With no settled/provisional split there is no mode
+  infix, so the names sort in time order.
 
 Two constraints the netCDFs must satisfy, both enforced with named errors: every
 file feeding one variable shares one chunk grid, and only the **last** file may
@@ -278,9 +277,8 @@ the store is Python-only.
 
 ### Deliverables
 
-- **`../nodd.py`** — the batch script, shared with RFROMV. Handles all eight
-  streams (RFROM's six plus GOBAI's two); `--stream o2` / `--stream no3` select
-  these. See "Running the batch script" below.
+- **`../nodd.py`** — the batch script, shared with RFROMV. Handles every RFROM
+  and GOBAI stream; `--stream o2` / `--stream no3` select these. See "Running the batch script" below.
 - **`../publish_viewer.py`** — builds the gridlook viewer and uploads it to
   `gs://noaa-oar-gobai/viewer/`. See ["Viewing in a browser"](#viewing-in-a-browser).
 - **`README.md`** — this file.
@@ -305,8 +303,7 @@ GOBAI HR is built on RFROM, and the coordinates are **identical**: opening a
 GOBAI file next to `RFROMV23_TEMP_STABLE_1993_01.nc` shows `latitude` (720),
 `longitude` (1440), `mean_pressure` (58) and `mean_pressure_bnds`
 `(mean_pressure, vertices)` matching value-for-value, same float32 dtype, on the
-same weekly time grid — RFROM's 1670-step stable axis is an exact prefix of
-GOBAI's 1719. The array shapes, the contiguous on-disk layout, and therefore the
+same weekly time grid — RFROM v2.3's 1719-step axis is identical to GOBAI's. The array shapes, the contiguous on-disk layout, and therefore the
 chunking, compression and I/O strategy are all the same, so the two products
 share `nodd.py` rather than forking it.
 
@@ -376,7 +373,7 @@ the full flag reference; `--version` defaults to `v202606` for these streams.
 ### Resource expectations (per stream)
 
 The arrays are exactly the same size as RFROM's, so these track the measured
-RFROM `temp_stable` run:
+RFROM temperature run:
 
 | | |
 |---|---|

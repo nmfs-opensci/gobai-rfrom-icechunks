@@ -614,7 +614,9 @@ def main(argv=None):
 
     print(f"Store: {args.store}")
     print(f"Source: {virtual_prefix(cfg)}")
-    print(f"Destination: {args.local_repo or f'gs://{cfg["bucket"]}/{cfg["store_prefix"]}'}\n")
+    # No nested same-type quotes inside the f-string: that needs Python 3.12.
+    destination = args.local_repo or f"gs://{cfg['bucket']}/{cfg['store_prefix']}"
+    print(f"Destination: {destination}\n")
 
     if args.list:
         plan(cfg)

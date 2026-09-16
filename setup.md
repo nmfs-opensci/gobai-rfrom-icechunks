@@ -144,7 +144,7 @@ stream's bucket/prefix):
 python -c "
 import gcsfs, os
 fs = gcsfs.GCSFileSystem(token=os.environ['NODD_GCS_TOKEN'])
-print(fs.ls('noaa-oar-rfrom/netcdf/v2.3/temp_stable')[:3])   # read
+print(fs.ls('noaa-oar-rfrom/netcdf/v2.3/temp')[:3])   # read
 fs.pipe('noaa-oar-rfrom/netcdf/v2.3/_write_check.txt', b'ok'); print('write OK')
 fs.rm('noaa-oar-rfrom/netcdf/v2.3/_write_check.txt')
 "
@@ -160,9 +160,9 @@ source .venv/bin/activate
 export NODD_SCRATCH_DIR="$HOME/rfromv-scratch"
 export NODD_GCS_TOKEN="$HOME/.config/gcloud/application_default_credentials.json"
 
-python nodd.py --stream temp_stable --list          # plan only: no creds, no download
-python nodd.py --stream temp_stable --blocks 0      # smoke-test one block end to end
-python nodd.py --stream temp_stable --all           # the production run
+python nodd.py --stream temp --list          # plan only: no creds, no download
+python nodd.py --stream temp --blocks 0      # smoke-test one block end to end
+python nodd.py --stream temp --all           # the production run
 ```
 
 The run prints the resolved scratch directory and destination prefix at startup —
@@ -176,10 +176,10 @@ dropped SSH session or a sleeping laptop can kill:
 ```sh
 tmux new -s rfrom                                     # then run inside; detach with Ctrl-b d
 # or, without tmux:
-nohup python nodd.py --stream temp_stable --all > temp_stable.log 2>&1 &
+nohup python nodd.py --stream temp --all > temp.log 2>&1 &
 
 # macOS: keep the machine awake for the whole run
-caffeinate -i python nodd.py --stream temp_stable --all
+caffeinate -i python nodd.py --stream temp --all
 ```
 
 Interruptions are cheap. The script skips any block already present in the
@@ -189,19 +189,19 @@ it picks up where it left off.
 
 ## Resource expectations (per stream)
 
-RFROM (`temp_stable`, measured) and GOBAI (same array shapes, same source
-layout) both track this table; GOBAI's totals are slightly larger because its
-record is 18 blocks instead of 17.
+RFROM v2.3 and GOBAI HR have the same array shapes, the same source layout and
+the same 1719-step record, so one table covers both. Measured on RFROM
+temperature.
 
-| | RFROM | GOBAI |
-|---|---|---|
-| monthly source files per block | 23 (~1 GB each) | 23 (~1 GB each); block 17 has 5 |
-| output file per block | ~7.6 GB | ~7–8 GB |
-| peak scratch disk | ~31 GB (one block, default cleanup) | ~31 GB |
-| blocks per stream | 17 | 18 |
-| total downloaded per stream | ~390 GB | ~410 GB |
-| total uploaded per stream | ~130 GB | ~130 GB |
-| RAM | 8 GB minimum, 16 GB comfortable | same |
+| | per stream |
+|---|---|
+| monthly source files per block | 23 (~1 GB each); the last block (17) has 5 |
+| output file per block | ~7–8 GB |
+| peak scratch disk | ~31 GB (one block, default cleanup) |
+| blocks per stream | 18 (0–17) |
+| total downloaded per stream | ~410 GB |
+| total uploaded per stream | ~130 GB |
+| RAM | 8 GB minimum, 16 GB comfortable |
 
 Wall-clock is dominated by download and upload, so it tracks your network
 throughput far more than your CPU — a bigger instance does not speed it up. The
