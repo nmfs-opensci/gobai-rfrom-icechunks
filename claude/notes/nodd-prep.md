@@ -1,5 +1,9 @@
 # RFROMV → NODD prep
 
+> **Historical.** Written before the batch script existed, against the original
+> six-stream, 17-block layout. The current layout is four streams of 18 blocks;
+> see `pipeline-history.md` ("six streams → four") and `CLAUDE.md`.
+
 Topic notes for the RFROM v2.3 NODD publishing pipeline. Handoff points here;
 detail lives here.
 

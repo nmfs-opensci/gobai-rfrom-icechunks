@@ -1,5 +1,10 @@
 # RFROMV NODD batch-processing script (next task)
 
+> **Historical.** This records the original six-stream design. RFROM v2.3 now
+> publishes four streams (`temp`, `sal`, `temp_error`, `sal_error`), and the
+> script is `nodd.py` at the repo root. See `pipeline-history.md` ("six streams
+> → four") and `CLAUDE.md` for the current layout.
+
 Goal: turn the tested single-file notebook
 `RFROMV/prep-one-netcdf-for-NODD.ipynb` into a script that processes **all**
 ERDDAP RFROM v2.3 files into NODD-bound netCDFs and uploads them to

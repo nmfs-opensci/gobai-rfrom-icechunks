@@ -39,7 +39,7 @@ files are named e.g. `GOBAI-O2-HR-v202606_1993-01-01_1994-11-25.nc`.
 
 Both run 1993-01-01 → 2025-12-05, weekly, 1719 steps, 396 monthly source files,
 ~0.41 TB per stream. There is **no stable/realtime/error split** — one stream per
-variable, unlike RFROM's six.
+variable, unlike RFROM's settled/realtime/error streams.
 
 ### Version string
 
@@ -103,10 +103,9 @@ read that rather than rediscovering them. Two differences from RFROM:
 
 - **No `data_mode` coordinate.** GOBAI HR has no stable/realtime split, so
   `realtime_start` is `None` and no mode flag is written. RFROM's store has one
-  because half its record is provisional.
-- **Nothing to migrate.** The tree was published as one continuous series per
-  variable from the start, so there is no equivalent of RFROM's `migrate_v23.py`
-  and no old prefixes to retire.
+  because its 2025 weeks are provisional.
+- **Plain file names.** With no settled/provisional split there is no mode
+  infix, so the names sort in time order.
 
 Two constraints the netCDFs must satisfy, both enforced with named errors: every
 file feeding one variable shares one chunk grid, and only the **last** file may
@@ -156,11 +155,11 @@ install line.
 pip install icechunk zarr xarray          # to read the store
 ```
 
-To *build* a store you need the full set, which is **not** in
-[`../requirements.txt`](../requirements.txt) — that file covers `nodd.py` only:
+To *build* a store you need the full set. The pinned install covers it; see
+[`../setup.md`](../setup.md) for the details:
 
 ```sh
-pip install -r ../requirements.txt -r ../requirements-icechunk.txt
+pip install -r ../requirements.lock      # Python 3.12
 ```
 
 ## Reading the published data
@@ -238,8 +237,8 @@ stable/realtime infix, so the date in the name is the first thing that varies.
 ### Reading from R
 
 R can read these files **without downloading them**. Appending `#mode=bytes` to
-the HTTPS URL makes netCDF fetch only the byte ranges it needs — measured on the
-hub against a 7.5 GB RFROM file on the identical grid: `nc_open` in 4.3 s, a 4×4
+the HTTPS URL makes netCDF fetch only the byte ranges it needs — measured against
+a 7.5 GB RFROM file on the identical grid: `nc_open` in 4.3 s, a 4×4
 slice in 0.9 s.
 
 ```r
@@ -278,9 +277,8 @@ the store is Python-only.
 
 ### Deliverables
 
-- **`../nodd.py`** — the batch script, shared with RFROMV. Handles all eight
-  streams (RFROM's six plus GOBAI's two); `--stream o2` / `--stream no3` select
-  these. See "Running the batch script" below.
+- **`../nodd.py`** — the batch script, shared with RFROMV. Handles every RFROM
+  and GOBAI stream; `--stream o2` / `--stream no3` select these. See "Running the batch script" below.
 - **`../publish_viewer.py`** — builds the gridlook viewer and uploads it to
   `gs://noaa-oar-gobai/viewer/`. See ["Viewing in a browser"](#viewing-in-a-browser).
 - **`README.md`** — this file.
@@ -305,8 +303,7 @@ GOBAI HR is built on RFROM, and the coordinates are **identical**: opening a
 GOBAI file next to `RFROMV23_TEMP_STABLE_1993_01.nc` shows `latitude` (720),
 `longitude` (1440), `mean_pressure` (58) and `mean_pressure_bnds`
 `(mean_pressure, vertices)` matching value-for-value, same float32 dtype, on the
-same weekly time grid — RFROM's 1670-step stable axis is an exact prefix of
-GOBAI's 1719. The array shapes, the contiguous on-disk layout, and therefore the
+same weekly time grid — RFROM v2.3's 1719-step axis is identical to GOBAI's. The array shapes, the contiguous on-disk layout, and therefore the
 chunking, compression and I/O strategy are all the same, so the two products
 share `nodd.py` rather than forking it.
 
@@ -325,17 +322,17 @@ access to, which is `gs://noaa-oar-gobai`. The dependency manifest,
 `requirements.txt`, lives at the repo root next to `nodd.py` and covers both
 products.
 
-Two environment variables override the JupyterHub defaults so the script runs on
-a bare VM or a laptop:
+Two environment variables set where the script works and which credentials it
+uses:
 
 | variable | default | meaning |
 |---|---|---|
-| `NODD_SCRATCH_DIR` | `/home/jovyan/shared-public/gobai-scratch` (GOBAI streams) | download + output scratch; needs ~35 GB free |
-| `NODD_GCS_TOKEN` | `~/.config/gcloud/application_default_credentials.json` (hub path) | credentials JSON path, **or** the keyword `google_default` to resolve ADC the usual way |
+| `NODD_SCRATCH_DIR` | `~/gobai-scratch` (GOBAI streams) | download + output scratch; needs ~35 GB free |
+| `NODD_GCS_TOKEN` | `~/.config/gcloud/application_default_credentials.json` | credentials JSON path, **or** the keyword `google_default` to resolve ADC the usual way |
 
 The older `RFROM_SCRATCH_DIR` / `RFROM_GCS_TOKEN` names are still honoured. Note
 the scratch **default** is product-specific (`gobai-scratch` vs
-`rfromv-scratch`), so GOBAI and RFROM runs on the same hub do not collide; an
+`rfromv-scratch`), so GOBAI and RFROM runs on the same machine do not collide; an
 explicit `NODD_SCRATCH_DIR` overrides both.
 
 ## Running the batch script
@@ -376,7 +373,7 @@ the full flag reference; `--version` defaults to `v202606` for these streams.
 ### Resource expectations (per stream)
 
 The arrays are exactly the same size as RFROM's, so these track the measured
-RFROM `temp_stable` run:
+RFROM temperature run:
 
 | | |
 |---|---|

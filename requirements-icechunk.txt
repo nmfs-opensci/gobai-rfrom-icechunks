@@ -3,9 +3,11 @@
 #
 #     pip install -r requirements.txt -r requirements-icechunk.txt
 #
+# requirements.lock pins both files to exact versions; see setup.md.
+#
 # Kept separate so a VM that only runs the NODD pipeline does not pull the
 # Icechunk stack. Lower bounds are the versions the store was built and
-# validated on (JupyterHub, Python 3.12.12) -- see
+# validated on (Python 3.12.12) -- see
 # claude/notes/rfromv-icechunk.md for the API notes that go with them, since
 # several of these APIs moved recently.
 icechunk>=2.2.0
