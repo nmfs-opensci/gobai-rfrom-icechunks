@@ -3,130 +3,119 @@
 Rolling index of session state. Keep this lean — a pointer to topic notes in
 `claude/notes/`, not a copy of them.
 
-## Repo state
+## Repo state (2026-09-16)
 
-- Repo: `nmfs-opensci/gobai-rfrom-icechunks`, working on `/home/jovyan/gobai-rfrom-icechunks`.
-- Branch `main`, clean. **No open PRs**; every task branch is merged and
-  deleted. PRs #29–#31 were **squash-merged** — a branch stacked on an unmerged PR has to be rebased onto
-  `main` afterwards (`git rebase --onto origin/main <old tip>`), or it conflicts.
-- **Open issues: #21** (RFROM v2.2 Ocean Heat Content →
-  NODD, not started), **#23** (pandas warning, cosmetic).
-- `nodd.py` (repo root) is the batch script for every stream of both products:
-  RFROM v2.3 (`temp`, `sal`, `temp_error`, `sal_error`), v2.2/v2.1
-  (`temp_v22`, `sal_v22`, `temp_v21`), GOBAI HR (`o2`, `no3`).
-  `build_icechunk.py` (repo root) builds the virtual Icechunk stores.
-  `requirements.txt` covers `nodd.py`; `requirements-icechunk.txt` covers
-  `build_icechunk.py`. `publish_viewer.py` (repo root) builds gridlook and
-  uploads it to `gs://<bucket>/viewer/`; `--product {gobai,rfrom}` is required
-  (PRs #30, #31). Off-hub setup is venv+pip only, walkthrough in `setup.md`
-  (also `python nodd.py --setup`).
-- **Published:** `gs://noaa-oar-rfrom/` holds `netcdf/v2.1`, `v2.2`, `v2.3`
-  (72 files, 527 GB), the virtual store `icechunk/v2.3` (2.4 MB), and
-  `index.html`. `gs://noaa-oar-gobai/` holds `netcdf/v202606/{o2,no3}` (36 files,
-  247 GB), the virtual store `icechunk/v202606` (1.17 MB, snapshot
-  `MD92HF22BRCTRF47BR60`), and `index.html`. Both buckets are CORS-enabled.
-  **Both products are now fully published — netCDFs, store and landing page.**
-- **gridlook viewers — live since 2026-09-16** in both buckets at `viewer/`
-  (gridlook `2649e66`, see `viewer/build-info.json`), linked from each landing
-  page and each product README. GOBAI: Eli opened it in a browser — works,
-  slow as expected (~130 MB per map, the chunk shape). RFROM: same build and
-  checks, **not yet opened in a browser**. See §8 of `rfromv-icechunk.md`.
-  Both `index.html` files in the buckets match `main` as of #31.
-  To republish: `python publish_viewer.py --product gobai --build ~/gridlook`,
-  then `--product rfrom --dist /tmp/gridlook-dist` (one build serves both).
-- `RFROMV/setup_bare_VM.txt` is **Eli's own scratch cheat-sheet** — informal by
-  design, overlaps `setup.md` on purpose. Do not tidy or sync it.
+- Repo: `nmfs-opensci/gobai-rfrom-icechunks`, at `/home/jovyan/gobai-rfrom-icechunks`.
+- **PR #32 is open, awaiting Eli's review/local test** — branch
+  `docs/reproducibility-review`. Do not merge it unasked. Until it merges,
+  `main` still has the old `CLAUDE.md`, the six-stream entries in `nodd.py`,
+  hub-path defaults, and `RFROMV/setup_bare_VM.txt`. If a new session starts
+  before the merge, read the PR branch, not `main`.
+- PRs #29–#31 were **squash-merged**. A branch stacked on an unmerged PR has to be
+  rebased onto `main` afterwards (`git rebase --onto origin/main <old tip>`).
+- **Open issues:** #33 (reproducibility cleanup checklist from the #32 review),
+  #21 (RFROM v2.2 Ocean Heat Content → NODD, not started), #23 (pandas warning,
+  cosmetic).
+- **Published:** `gs://noaa-oar-rfrom/` holds `netcdf/v2.1`, `v2.2` and `v2.3`,
+  the virtual store `icechunk/v2.3`, `index.html` and `viewer/`.
+  `gs://noaa-oar-gobai/` holds `netcdf/v202606/{o2,no3}`, `icechunk/v202606`
+  (snapshot `MD92HF22BRCTRF47BR60`), `index.html` and `viewer/`. Both products
+  are fully published. The RFROM viewer has not been opened in a browser yet.
+
+## What PR #32 changes
+
+The goal was that a newcomer can rebuild the netCDFs and stores from the docs.
+Summary; the detail is in `claude/notes/reproducibility-review.md` and
+`pipeline-history.md` (both on the PR branch):
+
+- **Root README:** a "Rebuilding from scratch" recipe, a file map, and a reuse
+  statement (Apache-2.0, attribution).
+- **Retired RFROM streams removed:** `temp_stable`/`temp_realtime`/`sal_stable`/`sal_realtime`
+  are gone from code and docs, and `migrate_v23.py` is deleted. The
+  migration finished 2026-09-04.
+- **No hub assumptions.** Defaults are `~/rfromv-scratch` / `~/gobai-scratch`
+  and `~/.config/gcloud/...`. **On the hub, set `NODD_SCRATCH_DIR` to use
+  `shared-public`.**
+- **Pinned install:** `requirements.lock` plus `constraints.txt`, for Python 3.12,
+  with the versions the published store was built with. Tested in a clean venv
+  with a full local GOBAI store build, and an o2 block 17 rebuild that is
+  identical to the published file.
+- **Fixes:** a 3.12-only f-string in `build_icechunk.py`, and
+  `NODD_GCS_TOKEN=google_default` failing in the store build (now uses
+  Icechunk's `from_env=True`).
+- **`setup_bare_VM.txt`** moved to the repo root and is now **maintained**,
+  updated to the current commands. The old "don't tidy it" rule is withdrawn.
+- **`CLAUDE.md`** was rewritten for the current layout; the old-stream history
+  moved to `pipeline-history.md`.
 
 ## Working principles
 
-- Notebooks run interactively on a JupyterHub; no build/test/lint system.
+- Scripts run on a Linux VM or laptop, not normally on the hub. Don't write
+  hub paths into defaults or docs.
 - Eli can't copy from the TUI — write anything he must paste into a file under
   `/home/jovyan/`.
 - **Every new task branches and ends in a PR**, including tasks given in chat.
-  Only `CLAUDE.md` and `claude/` commit straight to `main`.
+  Only `CLAUDE.md` and `claude/` commit straight to `main`. The exception is a
+  `CLAUDE.md` change that describes unmerged work: that goes in the PR.
 - Resolved decisions get edited into the PR body, not just here.
-- Unfixed findings → one GitHub issue per probable root cause.
+- Unfixed findings → a GitHub issue (a checklist issue like #33 is fine for small ones).
 
 ## Next task
 
-**Nothing is assigned.** The remaining open issues (#21 OHC, #23 pandas
-warning) have not been started and are not queued — ask.
-
-Do not start #21 from this handoff.
+**Nothing is assigned.** Wait for Eli on PR #32. Issues #33, #21 and #23 are
+not queued — ask.
 
 ## Notes
 
 | note | covers |
 |---|---|
-| `rfromv-icechunk.md` | the virtual Icechunk design, measurements, the reader recipe, codec/browser findings. **Read before any store work.** |
-| `gobai-icechunk.md` | the GOBAI HR store, and three `build_icechunk.py` traps that apply to every store — `commit()` spinning, a repo looking absent after a bulk delete, and cached anonymous reads. **Read with `rfromv-icechunk.md` before any store work.** |
-| `nodd-batch-script.md` | `nodd.py` design decisions, stream table, CF resolutions |
-| `nodd-prep.md` | the reference single-file pipeline (issue #1) |
+| `rfromv-icechunk.md` | the virtual Icechunk design, measurements, reader recipe, codec/browser findings, recorded versions (§11). **Read before any store work.** |
+| `gobai-icechunk.md` | the GOBAI HR store, and three `build_icechunk.py` traps that apply to every store. **Read with `rfromv-icechunk.md` before any store work.** |
+| `reproducibility-review.md` | the #32 review, what was fixed, and the lock-file test record *(PR branch)* |
+| `pipeline-history.md` | resolved work: ERDDAP timeout, h5py, the six → four stream restructure, the hub-free defaults *(latter two on PR branch)* |
+| `nodd-batch-script.md` | `nodd.py` design decisions and CF resolutions (historical six-stream layout) |
+| `nodd-prep.md` | the reference single-file pipeline (historical) |
 | `gobai-nodd.md` | GOBAI HR → NODD recon and validation |
 | `rfromv-v21-v22-nodd.md` | v2.2/v2.1 streams |
-| `pipeline-history.md` | resolved work: ERDDAP timeout, h5py, off-hub measurements, hub config |
 
 ## Facts worth not re-deriving
 
-- **Chunking is a zero-sum trade.** For chunk `(T, 1, Y, X)`: a global map read
-  costs `4.15 MB × T` and depends only on the *time* chunk; a point time series
-  costs `1719 × Y·X·4` and depends only on the *spatial* tile. Their product is
-  fixed by chunk size, so no single grid serves both. The published
-  `(100, 1, 180, 180)` is mediocre at both. Browser visualisation wants a
-  separate materialized, map-chunked store — not a re-tuned virtual one.
-- **R streams netCDF over HTTPS.** Append `#mode=bytes`; measured 4.3 s to open
-  and 0.9 s for a slice against a 7.5 GB remote file. `RNetCDF` too. Byte-range
-  is a netCDF-C build option, so a download fallback is documented. R's dimension
-  order is reversed: `(lon, lat, pressure, time)`.
-- **Reading an Icechunk store does not need `virtualizarr`** — build-time only.
-- **The bucket browses** via `console.cloud.google.com/storage/browser/...`
-  (needs a Google sign-in, but no project or permissions).
-  `storage.googleapis.com/<prefix>/` 404s — that is the endpoint, not
-  permissions. `?prefix=...&delimiter=/` lists with no account.
-- **`npm run build` of gridlook is OOM-killed on the hub** (container capped
-  at ~1.9 GB). `publish_viewer.py` uses `vite build --sourcemap false` with a
-  500 MB Node heap instead, which usually fits — but the cap is shared with
-  every other session on the hub, and it was killed once while another session
-  ran pytest. Retry when the hub is quieter, or build elsewhere and upload with
-  `--dist`. No bigger VM needed for the upload itself (22.5 MB).
-- **`index.html` is CDN-cached for an hour.** Verify uploads with `?cb=$RANDOM`
-  or a stale copy reads as a failed upload. Viewers see the old page that long.
-- **A freshly built Icechunk store looks broken to an anonymous reader for about
-  an hour, and this will fool you.** Icechunk's `repo` object holds the branch
-  pointer *and* the snapshot index, and on a public bucket it is served
-  `max-age=3600`. So an anonymous read returns the pre-commit snapshot, and even
-  an explicit snapshot id raises `SnapshotNotFoundError` — on a store that is
-  perfectly fine. The same calls with credentials are correct immediately.
-  Measured convergence: 1/15 correct at ~6 min, 5/10 at ~28, 12/12 at ~64.
-  Cache-busting cannot help — the URL is inside icechunk. **Diagnose with
-  credentials, and delete nothing on the strength of an anonymous read.** This
-  cost a store: see §3–§4 of `gobai-icechunk.md`.
-- **`build_icechunk.py` commits with `rebase_tries=0` on purpose.** Icechunk
-  defaults it to 1000 and will retry a spurious conflict for hours. These builds
-  are single-writer, so a conflict is always a bug. Do not restore the default.
-- **`gobai.css` out-specifies naive selectors** — `nav a:link` is (0,1,2). And
-  its `margin: 0 auto` centring dies if you set the `margin` shorthand. There is
-  no browser on the hub, so the cascade must be reasoned about or simulated.
-- **Only the hub has the scientific stack preinstalled**, which is how both the
-  h5py bug (#8) and the missing icechunk (#17) got through. Assume nothing is
-  installed off-hub.
-- Every code block in `RFROMV/index.html` and `RFROMV/README.md` was executed
+- **The hub is not a test bed for full runs.** The container is capped at
+  ~1.9 GB, shared by every session. The `notebook` env is now Python 3.11
+  **without icechunk**. For store work on the hub, make a venv with
+  `/srv/conda/bin/python3.12 -m venv …` and `pip install -r requirements.lock`.
+  A 19-step block (block 17) fits in memory; a full 100-step block (~8 GB)
+  does not.
+- **Chunking is a zero-sum trade.** For chunk `(T, 1, Y, X)`, a global map read
+  costs `4.15 MB × T` and a point time series costs `1719 × Y·X·4` bytes, so no
+  grid serves both. Browser visualisation wants a separate map-chunked store.
+- **A freshly built store looks broken to anonymous readers for about an hour**
+  (the branch pointer is cached for 3600 s). Diagnose with credentials, and delete
+  nothing because of an anonymous read. See §3–4 of `gobai-icechunk.md`.
+- **`commit()` uses `rebase_tries=0` on purpose.** Don't restore the default.
+- **Don't `--force` a published netCDF casually.** The store references byte
+  ranges inside it.
+- **`index.html` is CDN-cached for an hour.** Verify uploads with `?cb=$RANDOM`.
+- **`npm run build` of gridlook is OOM-killed on the hub.** `publish_viewer.py`
+  uses `vite build --sourcemap false` with a 500 MB heap. To republish, run
+  `python publish_viewer.py --product gobai --build ~/gridlook`, then
+  `--product rfrom --dist /tmp/gridlook-dist`.
+- **R streams netCDF over HTTPS** with `#mode=bytes`, and its dimension order is
+  reversed. Reading an Icechunk store does not need `virtualizarr`.
+- **`gobai.css` out-specifies naive selectors**, and there is no browser on the
+  hub, so reason about the cascade.
+- Every code block on the landing pages and in the product READMEs was executed
   before publishing. Keep that standard.
 
 ## Follow-ups (not blocking)
 
-- A bad `--blocks` value raises a raw `ValueError` rather than a clean argparse error.
-- `requirements.txt` is unverified by a clean-venv install — exactly how #8 got through.
-- Nothing in the off-hub path has been run end to end from a bare VM by an agent.
-- `update_nodd.py` — weekly realtime reconcile, replacing the affected tail
-  block(s). Note that block 16 is named `..._STABLE_REALTIME_...`; promoting
-  those weeks renames the file and strands the store's reference to it, so the
-  first promotion needs a store rebuild, not just a `realtime_start` change.
-  Also: **every store rebuild has the hour-long stale-read window above**, so
-  automating frequent updates needs that settled first.
-- `unsafe_use_metadata` on the icechunk storage settings would let it tell a lost
-  response from a real conflict on GCS. Not enabled — `rebase_tries=0` makes the
-  failure loud and cheap instead. Revisit if commits ever fail for real.
-- Root `README.md` could use a `## Reuse and citation` section (Apache-2.0 → attribution).
-- **Project memory on this hub is not backed up** — `eeholmes/claude-config#1`.
-  Do not re-run `bootstrap.sh` here until the `gridlook` divergence is merged.
+- Everything small is in #33.
+- `update_nodd.py` (the weekly realtime reconcile) is not built. Promoting block 16's
+  provisional weeks renames the file and needs a store rebuild, not just a
+  `realtime_start` change. Every rebuild has the hour-long stale-read window.
+- `unsafe_use_metadata` on the Icechunk storage settings is not enabled;
+  `rebase_tries=0` makes failures loud instead. Revisit if commits ever fail
+  for real.
+- **Project memory on this hub is not symlinked** into `~/claude-config`
+  (`eeholmes/claude-config#1`). Mirror memory edits by hand, and don't re-run
+  `bootstrap.sh` here until that is resolved.
