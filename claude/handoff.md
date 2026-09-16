@@ -26,13 +26,11 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   247 GB), the virtual store `icechunk/v202606` (1.17 MB, snapshot
   `MD92HF22BRCTRF47BR60`), and `index.html`. Both buckets are CORS-enabled.
   **Both products are now fully published — netCDFs, store and landing page.**
-- **gridlook viewer — merged in #30, not yet uploaded as of 2026-09-16.**
-  `GOBAI-O2/index.html` and `GOBAI-O2/README.md` now link to
-  `…/noaa-oar-gobai/viewer/index.html#icechunk+…/icechunk/v202606::varname=o2`
-  (and `no3`). Those links are dead until Eli runs
-  `python publish_viewer.py --build ~/gridlook` **and then** re-uploads
-  `index.html`. Nothing has been rendered in a real browser yet — see §8 of
-  `rfromv-icechunk.md` for what was verified.
+- **gridlook viewer — live since 2026-09-16** at `gs://noaa-oar-gobai/viewer/`
+  (gridlook `2649e66`, see `viewer/build-info.json`), linked from the landing
+  page and `GOBAI-O2/README.md`. Files, MIME types and CORS checked over HTTP;
+  nothing has been rendered in a real browser by an agent — see §8 of
+  `rfromv-icechunk.md`.
 - `RFROMV/setup_bare_VM.txt` is **Eli's own scratch cheat-sheet** — informal by
   design, overlaps `setup.md` on purpose. Do not tidy or sync it.
 
@@ -48,8 +46,7 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 
 ## Next task
 
-**Nothing is assigned.** Outstanding on Eli's side: upload the viewer and the
-new landing page. The remaining open issues (#21 OHC, #23 pandas
+**Nothing is assigned.** The remaining open issues (#21 OHC, #23 pandas
 warning) have not been started and are not queued — ask.
 
 Do not start #21 from this handoff.
@@ -85,7 +82,10 @@ Do not start #21 from this handoff.
   permissions. `?prefix=...&delimiter=/` lists with no account.
 - **`npm run build` of gridlook is OOM-killed on the hub** (container capped
   at ~1.9 GB). `publish_viewer.py` uses `vite build --sourcemap false` with a
-  500 MB Node heap instead, which fits. No bigger VM needed; the upload is 22.5 MB.
+  500 MB Node heap instead, which usually fits — but the cap is shared with
+  every other session on the hub, and it was killed once while another session
+  ran pytest. Retry when the hub is quieter, or build elsewhere and upload with
+  `--dist`. No bigger VM needed for the upload itself (22.5 MB).
 - **`index.html` is CDN-cached for an hour.** Verify uploads with `?cb=$RANDOM`
   or a stale copy reads as a failed upload. Viewers see the old page that long.
 - **A freshly built Icechunk store looks broken to an anonymous reader for about
