@@ -382,6 +382,10 @@ visible and detect both as `regular`. Still unchecked: the actual WebGL render,
 the level selector for `mean_pressure`, and in-browser CF time decoding. The
 viewer is hosted in the same bucket (`viewer/`), built by `publish_viewer.py`.
 
+**Rendered in a browser, 2026-09-16 — by Eli, on the GOBAI viewer:** it works
+and looks right; slow, as the chunk-shape finding above predicts. The RFROM
+viewer (same build, `noaa-oar-rfrom/viewer/`) is not yet browser-checked.
+
 **Blocker 2 — the chunk shape, which is much worse in a browser.** A single
 global map at one time and one level touches 32 chunks (4 x 8 tiles), each
 holding 100 time steps: **~131 MB compressed to download and ~415 MB
