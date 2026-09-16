@@ -278,6 +278,26 @@ copy of the data:
 
 For the store, see ["Reading the store"](#reading-the-store) above.
 
+### Viewing in a browser
+
+The v2.3 store opens in [gridlook](https://github.com/eeholmes/gridlook), a WebGL
+globe viewer hosted in the same bucket. No install, no account:
+
+- **[Ocean temperature](https://storage.googleapis.com/noaa-oar-rfrom/viewer/index.html#icechunk+https://storage.googleapis.com/noaa-oar-rfrom/icechunk/v2.3::varname=ocean_temperature)** · [its error](https://storage.googleapis.com/noaa-oar-rfrom/viewer/index.html#icechunk+https://storage.googleapis.com/noaa-oar-rfrom/icechunk/v2.3::varname=ocean_temperature_error)
+- **[Ocean salinity](https://storage.googleapis.com/noaa-oar-rfrom/viewer/index.html#icechunk+https://storage.googleapis.com/noaa-oar-rfrom/icechunk/v2.3::varname=ocean_salinity)** · [its error](https://storage.googleapis.com/noaa-oar-rfrom/viewer/index.html#icechunk+https://storage.googleapis.com/noaa-oar-rfrom/icechunk/v2.3::varname=ocean_salinity_error)
+
+The dataset goes after the `#`, so the same viewer opens any public Zarr or
+Icechunk store: `…/viewer/index.html#icechunk+<https URL of the store>`.
+
+Expect the first map to take a while. The store inherits the netCDFs' chunks,
+`(100, 1, 180, 180)`, so one global map at one level downloads ~131 MB, and
+moving to another 100-week block downloads that much again. Steps within a
+block are cached. See §7–§8 of
+[`../claude/notes/rfromv-icechunk.md`](../claude/notes/rfromv-icechunk.md).
+
+The viewer is published by [`../publish_viewer.py`](../publish_viewer.py)
+(`--product rfrom`); its docstring covers building gridlook and uploading it.
+
 ### Reading the netCDFs directly
 
 ```sh
@@ -368,6 +388,8 @@ the store is Python-only.
   `nodd.py` is this notebook generalized to all six streams — the notebook
   remains the readable, step-annotated explanation of *why* each stage is the way
   it is.
+- **`../publish_viewer.py`** — builds the gridlook viewer and uploads it to
+  `gs://noaa-oar-rfrom/viewer/`. See ["Viewing in a browser"](#viewing-in-a-browser).
 - **`../build_icechunk.py`** — builds the virtual Icechunk store from the
   published netCDFs (GitHub issue #17). Config-driven like `nodd.py`; also
   configured for GOBAI HR. See "The Icechunk store" above.

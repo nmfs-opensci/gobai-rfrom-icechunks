@@ -24,9 +24,14 @@ Steps
 2. Build and upload. ``--build`` runs the Vite build for you; without it the
    script uploads an existing ``--dist`` folder::
 
-       python publish_viewer.py --build ~/gridlook --dry-run   # build, list uploads
-       python publish_viewer.py --build ~/gridlook             # build and upload
-       python publish_viewer.py --dist /tmp/gridlook-dist      # upload a prior build
+       python publish_viewer.py --product gobai --build ~/gridlook --dry-run
+       python publish_viewer.py --product gobai --build ~/gridlook   # build + upload
+       python publish_viewer.py --product rfrom --dist /tmp/gridlook-dist
+
+   ``--product`` picks the bucket and store (see ``PRODUCTS``); it is required,
+   like ``nodd.py --stream``, so nothing is uploaded to a bucket by default. One
+   build serves every product -- the dataset lives in the link, not the build --
+   so build once and pass ``--dist`` for the second bucket.
 
 3. Open the viewer URL the script prints. ``--prune`` also deletes objects under
    the viewer prefix that the new build no longer contains -- every build has new
@@ -63,10 +68,21 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-BUCKET = "noaa-oar-gobai"
+# Same buckets and store prefixes as build_icechunk.py's STORES.
+PRODUCTS = {
+    "gobai": {
+        "bucket": "noaa-oar-gobai",
+        "store_prefix": "icechunk/v202606",
+        "variables": ("o2", "no3"),
+    },
+    "rfrom": {
+        "bucket": "noaa-oar-rfrom",
+        "store_prefix": "icechunk/v2.3",
+        "variables": ("ocean_temperature", "ocean_salinity",
+                      "ocean_temperature_error", "ocean_salinity_error"),
+    },
+}
 PREFIX = "viewer"
-STORE_PREFIX = "icechunk/v202606"
-VARIABLES = ("o2", "no3")
 DEFAULT_DIST = Path("/tmp/gridlook-dist")
 PUBLIC = "https://storage.googleapis.com"
 
@@ -98,10 +114,11 @@ CONTENT_TYPES = {
 }
 
 
-def viewer_urls(bucket: str, prefix: str) -> dict[str, str]:
-    store = f"icechunk+{PUBLIC}/{bucket}/{STORE_PREFIX}"
+def viewer_urls(product: dict, prefix: str) -> dict[str, str]:
+    bucket = product["bucket"]
+    store = f"icechunk+{PUBLIC}/{bucket}/{product['store_prefix']}"
     base = f"{PUBLIC}/{bucket}/{prefix}/index.html"
-    return {var: f"{base}#{store}::varname={var}" for var in VARIABLES}
+    return {var: f"{base}#{store}::varname={var}" for var in product["variables"]}
 
 
 def build(gridlook: Path, dist: Path) -> None:
@@ -181,11 +198,12 @@ def verify(bucket: str, prefix: str) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    ap.add_argument("--product", required=True, choices=sorted(PRODUCTS),
+                    help="which bucket and store to publish the viewer for")
     ap.add_argument("--build", type=Path, metavar="GRIDLOOK_DIR",
                     help="gridlook checkout to build before uploading")
     ap.add_argument("--dist", type=Path, default=DEFAULT_DIST,
                     help=f"build output folder (default {DEFAULT_DIST})")
-    ap.add_argument("--bucket", default=BUCKET)
     ap.add_argument("--prefix", default=PREFIX,
                     help=f"folder in the bucket for the viewer (default {PREFIX!r})")
     ap.add_argument("--dry-run", action="store_true",
@@ -194,22 +212,24 @@ def main() -> None:
                     help="delete objects under the prefix that this build lacks")
     args = ap.parse_args()
     prefix = args.prefix.strip("/")
+    product = PRODUCTS[args.product]
+    bucket = product["bucket"]
 
     if args.build:
         build(args.build, args.dist)
     rows = plan(args.dist)
     size = sum(p.stat().st_size for p, *_ in rows)
-    print(f"{len(rows)} files, {size / 2**20:.1f} MB -> gs://{args.bucket}/{prefix}/")
+    print(f"{len(rows)} files, {size / 2**20:.1f} MB -> gs://{bucket}/{prefix}/")
 
     if args.dry_run:
         for _, rel, ctype, cache in rows:
             print(f"  {rel:55s} {ctype:28s} {cache}")
     else:
-        upload(rows, args.bucket, prefix, args.prune)
-        verify(args.bucket, prefix)
+        upload(rows, bucket, prefix, args.prune)
+        verify(bucket, prefix)
 
     print("\nViewer links:")
-    for var, url in viewer_urls(args.bucket, prefix).items():
+    for var, url in viewer_urls(product, prefix).items():
         print(f"  {var}: {url}")
 
 

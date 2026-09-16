@@ -55,6 +55,7 @@ table.dl th { background:#f4f6f8; }
 </header>
 <nav class="rf-nav" aria-label="Section navigation">
 	<a href="#about">About</a>
+	<a href="#viewer">View in a browser</a>
 	<a href="#erddap">Data Access (ERDDAP)</a>
 	<a href="#download">Data Access (Download)</a>
 	<a href="#code">Data Access (Code)</a>
@@ -87,6 +88,22 @@ table.dl th { background:#f4f6f8; }
 		<p>Feel free to use RFROM for any non-commercial purposes, but do so at your own risk, we cannot take any liability on the use of RFROM.</p>
 		<p><i>Acknowledging use:</i></p>
 		<p>Please cite Lyman and Johnson (2023) when using RFROM.</p>
+		<h2 class="sec" id="viewer">View in a browser</h2>
+		<p>Explore RFROM V2.3 on an interactive globe, with no install and no
+		account. The viewer is <a href="https://github.com/eeholmes/gridlook" target="_blank">gridlook</a>,
+		and it reads the Icechunk store directly from this bucket.</p>
+		<table class="dl">
+			<tr><th>Field</th><th>Viewer</th></tr>
+			<tr><td>Ocean temperature</td><td><a href="https://storage.googleapis.com/noaa-oar-rfrom/viewer/index.html#icechunk+https://storage.googleapis.com/noaa-oar-rfrom/icechunk/v2.3::varname=ocean_temperature" target="_blank">Open <code>ocean_temperature</code> in the viewer</a></td></tr>
+			<tr><td>Ocean salinity</td><td><a href="https://storage.googleapis.com/noaa-oar-rfrom/viewer/index.html#icechunk+https://storage.googleapis.com/noaa-oar-rfrom/icechunk/v2.3::varname=ocean_salinity" target="_blank">Open <code>ocean_salinity</code> in the viewer</a></td></tr>
+			<tr><td>Ocean temperature error</td><td><a href="https://storage.googleapis.com/noaa-oar-rfrom/viewer/index.html#icechunk+https://storage.googleapis.com/noaa-oar-rfrom/icechunk/v2.3::varname=ocean_temperature_error" target="_blank">Open <code>ocean_temperature_error</code> in the viewer</a></td></tr>
+			<tr><td>Ocean salinity error</td><td><a href="https://storage.googleapis.com/noaa-oar-rfrom/viewer/index.html#icechunk+https://storage.googleapis.com/noaa-oar-rfrom/icechunk/v2.3::varname=ocean_salinity_error" target="_blank">Open <code>ocean_salinity_error</code> in the viewer</a></td></tr>
+		</table>
+		<p class="note">The viewer shows V2.3 only. The first map can take a while to
+		appear: each view downloads about 130&nbsp;MB, because the data are stored in
+		100-week blocks. Moving between weeks in the same block is quick. Crossing
+		into another block downloads again.</p>
+
 		<h2 class="sec" id="erddap">Data Access &#8212; ERDDAP</h2>
 		<p>ERDDAP&#8217;s griddap form lets you subset by time, pressure and
 		region in the browser and download just that subset, in netCDF, CSV or
