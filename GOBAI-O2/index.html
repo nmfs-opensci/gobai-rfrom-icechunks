@@ -3,10 +3,46 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Gridded Ocean Biogeochemistry from Artificial Intelligence (GOBAI) - GOBAI-O2</title>
+<title>Gridded Ocean Biogeochemistry from Artificial Intelligence (GOBAI)</title>
 
 <link rel="icon" type="image/png" href="https://www.pmel.noaa.gov/gobai/favicon-32.png">
 <link href="https://www.pmel.noaa.gov/gobai/gobai.css" rel="stylesheet" type="text/css">
+<style>
+/* --- added for navigation and data-access sections.
+       Colours are gobai.css's own: #004F98 link blue, #41B7C5 hover teal. --- */
+.rf-nav {
+	display:flex; flex-wrap:wrap; justify-content:center; gap:.4em 1.6em;
+	background:#004F98; padding:.7em 1.1em; border-radius:3px;
+	/* margin-bottom only, as a longhand: gobai.css centres nav with
+	   "margin: 0 auto" at >=960px and uses "margin: 15px" below that.
+	   The shorthand would clobber both. */
+	margin-bottom:1.4em;
+	text-align:center;
+}
+/* Must out-specify "nav a:link" in gobai.css (0,1,2), or its blue wins here. */
+.rf-nav a, .rf-nav a:link, .rf-nav a:visited {
+	color:#fff; text-decoration:none; font-weight:600; font-size:1em;
+	margin-right:0;   /* gobai.css adds 20px; gap handles spacing instead */
+}
+/* Hover keeps white + underline: gobai.css's #41B7C5 teal is only 3.42:1 on
+   this blue, which fails WCAG AA for normal text. White is 8.17:1. */
+.rf-nav a:hover, .rf-nav a:focus { color:#fff; text-decoration:underline; }
+
+h2.sec { border-bottom:2px solid #004F98; padding-bottom:.2em; margin-top:2.2em; }
+h3.ver { border-left:5px solid #004F98; background:#eef3f7; padding:.4em .7em;
+         margin:1.7em 0 .3em; font-size:1.05em; }
+.ver-note { font-size:.9em; color:#555; margin:.2em 0 .7em; }
+table.dl { border-collapse:collapse; margin:.5em 0 1em; font-size:.93em; }
+table.dl th, table.dl td { border:1px solid #d7dde3; padding:.35em .75em; text-align:left; }
+table.dl th { background:#f4f6f8; }
+.cloud pre { background:#f4f6f8; border:1px solid #d7dde3; border-left:3px solid #004F98;
+             padding:.75em 1em; overflow-x:auto; font-size:.88em; line-height:1.45; }
+.cloud code, code { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+.cloud table { border-collapse:collapse; margin:1em 0; font-size:.92em; }
+.cloud th, .cloud td { border:1px solid #d7dde3; padding:.35em .7em; text-align:left; }
+.cloud th { background:#f4f6f8; }
+.cloud .note, .note { font-size:.92em; color:#444; }
+</style>
 </head>
 
 <body>
@@ -17,12 +53,16 @@
 		<h1 class="site-name">GOBAI: Gridded Ocean Biogeochemistry from Artificial Intelligence </h1>
 	</div>
 </header>
-<!--<nav><a href="../index.html">Home</a></nav>-->
+<nav class="rf-nav" aria-label="Section navigation">
+	<a href="#about">About</a>
+	<a href="#erddap">Data Access (ERDDAP)</a>
+	<a href="#download">Data Access (Download)</a>
+	<a href="#code">Data Access (Code)</a>
+</nav>
 <main>
 	<div id="main-content"> <!-- InstanceBeginEditable name="MainContent" -->
-		<h2>GOBAI-O<sub>2</sub></h2>
+		<h2 class="sec" id="about">About GOBAI</h2>
 		<p>Jonathan D. Sharp, Andrea J. Fassbender, Brendan R. Carter, Gregory C. Johnson, John P. Dunne, and Cristina Schultz</p>
-		<h3>About</h3>
 		<p>GOBAI-O<sub>2</sub> is a gridded data product that provides three-dimensional monthly fields of dissolved oxygen in the global ocean. It was constructed by training machine learning algorithms with observations of oxygen concentration ([O<sub>2</sub>]) from discrete shipboard measurements and autonomous sensors on biogeochemical Argo floats, then applying those machine learning algorithms to three-dimensional monthly gridded fields of temperature and salinity. The algorithms used to produce GOBAI-O<sub>2</sub> have been validated using real observations and synthetic data from model output, and the data product itself has been compared against the World Ocean Atlas and selected discrete measurements. Results of these validation and comparison exercises are detailed in <a href="https://doi.org/10.5194/essd-15-4481-2023" target="_blank">Sharp et al. (2023)</a>.</p>
 		<div class="video-ani clearfix">
 			<div>
@@ -46,22 +86,152 @@
 					Your browser does not support the video tag. <a href="https://www.pmel.noaa.gov/gobai/animations/O2_by_month_1500dbar_v2.2.mp4">Download the file</a> </video>
 			</div>
 		</div>
-		<h3>Access</h3>
-		<p>GOBAI-O<sub>2</sub> can be accessed from NOAA's National Centers for Environmental Information at <a href="https://accession.nodc.noaa.gov/0259304" target="_blank">https://accession.nodc.noaa.gov/0259304</a> (doi: 10.25921/z72m-yz67). Netcdfs nd cloud-native access via icechunk are available on <a href="https://console.cloud.google.com/storage/browser/noaa-oar-gobai" target="_blank">Google storage</a> via the <a href="https://www.noaa.gov/information-technology/open-data-dissemination" target="_blank">NOAA NODD program</a>.</p>
+
+		<h3>GOBAI HR &#8212; the high-resolution product</h3>
+		<p><b>GOBAI HR-v1.0</b> is the high-resolution member of the GOBAI family, and
+		it is what this site publishes on the cloud. It carries dissolved
+		<b>oxygen</b> and <b>nitrate</b> on a near-global &#188;-degree grid over 58
+		mean-pressure levels at <b>weekly</b> resolution, 1993-01-01 to 2025-12-05
+		&#8212; 1719 weekly fields per variable. It is built from Argo float data and
+		GLODAP shipboard data applied to the temperature and salinity fields of
+		<a href="https://www.pmel.noaa.gov/rfrom/" target="_blank">RFROM</a>, and shares
+		RFROM&#8217;s grid exactly.</p>
+		<p class="ver-note"><b>GOBAI HR-v1.0 is preliminary.</b> The files carry
+		<code>comment = "preliminary"</code> and cite a manuscript in preparation
+		(Sharp et al., <i>GOBAI High Resolution Data Products</i>, in prep.). Expect
+		the fields to change before the product is final.</p>
+		<p class="ver-note">The version string used throughout the cloud data is
+		<code>v202606</code>, which is what the files themselves are stamped with, in
+		both the file names and each file&#8217;s <code>title</code> attribute. The
+		ERDDAP dataset titles say <code>HR-v1.0</code> for the same data.</p>
+
 		<h3>Acknowledging use</h3>
-		<p>Please include the data product citation shown below when using GOBAI-O<sub>2</sub>. In addition, the GOBAI-O<sub>2</sub> manuscript published in <i>Earth System Science Data</i> may also be cited.</p>
+		<p>Please include the data product citation shown below when using GOBAI-O<sub>2</sub>. In addition, the GOBAI-O<sub>2</sub> manuscript published in <i>Earth System Science Data</i> may also be cited. GOBAI HR-v1.0 has no citable release yet; cite the manuscript in preparation until one exists.</p>
 		<h3>Data product citation</h3>
 		<p>Sharp, J. D., Fassbender, A. J., Carter, B. R., Johnson, G. C., Schultz, C., Dunne, J. P. (2022). GOBAI-O<sub>2</sub>: A Global Gridded Monthly Dataset of Ocean Interior Dissolved Oxygen Concentrations Based on Shipboard and Autonomous Observations (NCEI Accession 0259304).  NOAA National Centers for Environmental Information. Dataset. <a href="https://doi.org/10.25921/z72m-yz67" target="_blank">https://doi.org/10.25921/z72m-yz67</a>.</p>
 		<h3>Manuscript citation</h3>
 		<p>Sharp, J. D., Fassbender, A. J., Carter, B. R., Johnson, G. C., Schultz, C., Dunne, J. P. (2023). GOBAI-O<sub>2</sub>: temporally and spatially resolved fields of ocean interior dissolved oxygen over nearly 2 decades. <i>Earth System Science Data</i>, 15 (10), 4481 - 4518,. <a href="https://doi.org/10.5194/essd-15-4481-2023" target="_blank">https://doi.org/10.5194/essd-15-4481-2023</a>.</p>
 		<p class="display-it"><b>Contact:</b> <a href="mailto:jonathan.sharp@noaa.gov">jonathan.sharp@noaa.gov</a> | <a href="mailto:oar.pmel.gobop@noaa.gov">oar.pmel.gobop@noaa.gov</a></p>
-		<script>
-	new Freezeframe({
-		selector: '.ani-maps',	// CSS class of animated image
-		trigger: 'click',		// Click image to play/pause animation
-		responsive: false		// Whether or not to make the image responsive (100% width) (controlling in CSS)
-	});
-</script> 
+
+		<h2 class="sec" id="erddap">Data Access &#8212; ERDDAP</h2>
+		<p>ERDDAP&#8217;s griddap form lets you subset by time, pressure and
+		region in the browser and download just that subset, in netCDF, CSV or
+		several other formats. Start here if you want part of the data rather
+		than whole files.</p>
+
+		<h3 class="ver" id="erddap-hr">GOBAI HR-v1.0 (v202606) &#8212; current</h3>
+		<p class="ver-note">Weekly &#188;&#176; oxygen and nitrate on 58 mean-pressure
+		levels, 1993-01-01 to 2025-12-05. Preliminary.</p>
+		<table class="dl">
+			<tr><th>Field</th><th>ERDDAP dataset</th></tr>
+			<tr><td>Dissolved oxygen</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/griddap/gobai_o2_hr_v10.html" target="_blank"><code>gobai_o2_hr_v10</code></a></td></tr>
+			<tr><td>Nitrate</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/griddap/gobai_no3_hr_v10.html" target="_blank"><code>gobai_no3_hr_v10</code></a></td></tr>
+		</table>
+
+		<h2 class="sec" id="download">Data Access &#8212; Download</h2>
+		<p>Whole files, from two places. <b>ERDDAP</b> serves the monthly source
+		files through a browsable directory listing. <b>NOAA Open Data
+		Dissemination (NODD)</b> holds the same data repackaged into larger,
+		cloud-optimised blocks in the public bucket
+		<code>gs://noaa-oar-gobai</code> &#8212; open data, no account or
+		credentials.</p>
+		<p class="note">Each bucket path below links to the
+		<b>Google Cloud console</b>, where you can browse and download individual
+		files. The bucket is public, so no project and no permissions are needed
+		&#8212; but the console does require you to be signed in to some Google
+		account. With no account at all, list the files with the code in
+		<a href="#code">Data Access (Code)</a>, or over plain HTTPS at
+		<code>https://storage.googleapis.com/noaa-oar-gobai?prefix=netcdf/v202606/&amp;delimiter=/</code>.</p>
+
+		<h3 class="ver" id="download-hr">GOBAI HR-v1.0 (v202606) &#8212; current</h3>
+		<table class="dl">
+			<tr><th>Field</th><th>NODD (36 files, 247 GB)</th><th>ERDDAP source files</th></tr>
+			<tr><td>Dissolved oxygen</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-gobai/netcdf/v202606/o2/" target="_blank">netcdf/v202606/o2/</a></code> &#8212; 18 files, 121 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/gobai_o2_hr_v10/" target="_blank">monthly</a></td></tr>
+			<tr><td>Nitrate</td><td><code><a href="https://console.cloud.google.com/storage/browser/noaa-oar-gobai/netcdf/v202606/no3/" target="_blank">netcdf/v202606/no3/</a></code> &#8212; 18 files, 125 GB</td><td><a href="https://data.pmel.noaa.gov/pmel/erddap/files/gobai_no3_hr_v10/" target="_blank">monthly</a></td></tr>
+		</table>
+		<p class="ver-note">On NODD each variable is one continuous series split
+		into 100-week files, so the 1719 weeks come as 17 files of 100 weeks plus a
+		final file of 19. File names carry the weeks they cover, e.g.
+		<code>GOBAI-O2-HR-v202606_1993-01-01_1994-11-25.nc</code>.</p>
+
+		<h3 class="ver" id="download-o2-monthly">GOBAI-O<sub>2</sub> monthly &#8212; not on NODD</h3>
+		<p class="ver-note">The monthly GOBAI-O<sub>2</sub> product is distributed by
+		NOAA&#8217;s National Centers for Environmental Information, not from this
+		bucket.</p>
+		<table class="dl">
+			<tr><th>Field</th><th>Where</th></tr>
+			<tr><td>Dissolved oxygen, monthly</td><td><a href="https://accession.nodc.noaa.gov/0259304" target="_blank">NCEI Accession 0259304</a> (doi:&nbsp;<a href="https://doi.org/10.25921/z72m-yz67" target="_blank">10.25921/z72m-yz67</a>)</td></tr>
+		</table>
+
+		<h2 class="sec" id="code">Data Access &#8212; Code</h2>
+		<div class="cloud">
+		<table>
+			<tr><th>What</th><th>Where</th><th>Use it for</th></tr>
+			<tr><td>Icechunk store</td><td><code>gs://noaa-oar-gobai/icechunk/v202606</code></td>
+				<td>The whole HR-v1.0 record &#8212; oxygen and nitrate on one 1719-week time axis, opened as a single dataset. Python only.</td></tr>
+			<tr><td>netCDF files</td><td><code>gs://noaa-oar-gobai/netcdf/v202606/</code></td>
+				<td>Ordinary netCDF-4 files. Any language. Stream them or download them.</td></tr>
+		</table>
+		<p class="note">The Icechunk store covers GOBAI HR-v1.0 only.</p>
+
+		<p><b>Python &#8212; install</b></p>
+<pre><code>pip install xarray gcsfs h5netcdf     # netCDF files
+pip install icechunk zarr             # ...plus the Icechunk store</code></pre>
+
+		<p><b>Python &#8212; the whole HR-v1.0 record, via Icechunk</b></p>
+<pre><code>import icechunk as ic, xarray as xr
+
+SRC = "gs://noaa-oar-gobai/netcdf/v202606/"
+repo = ic.Repository.open(
+    ic.gcs_storage(bucket="noaa-oar-gobai", prefix="icechunk/v202606", anonymous=True),
+    authorize_virtual_chunk_access=ic.containers_credentials({SRC: ic.gcs_credentials(anonymous=True)}),
+)
+ds = xr.open_zarr(repo.readonly_session("main").store, consolidated=False, chunks={})</code></pre>
+
+		<p class="note">If reads feel slow, raise Zarr&#8217;s default concurrency
+		of 10: <code>import zarr; zarr.config.set({"async.concurrency": 128})</code>.</p>
+
+		<p><b>Python &#8212; a single netCDF file</b></p>
+<pre><code>import xarray as xr
+
+url = "gs://noaa-oar-gobai/netcdf/v202606/o2/GOBAI-O2-HR-v202606_1993-01-01_1994-11-25.nc"
+ds = xr.open_dataset(url, engine="h5netcdf", storage_options={"token": "anon"}, chunks={})</code></pre>
+
+		<p class="note">To see what is published:
+		<code>import gcsfs; gcsfs.GCSFileSystem(token="anon").ls("noaa-oar-gobai/netcdf/v202606/o2")</code>.</p>
+
+		<p><b>R</b></p>
+		<p>R can read these files <i>without downloading them</i>. Append
+		<code>#mode=bytes</code> to the HTTPS URL and netCDF reads only the bytes
+		it needs.</p>
+<pre><code>install.packages("ncdf4")
+library(ncdf4)
+
+u &lt;- paste0("https://storage.googleapis.com/noaa-oar-gobai/netcdf/v202606/o2/",
+            "GOBAI-O2-HR-v202606_1993-01-01_1994-11-25.nc#mode=bytes")
+nc &lt;- nc_open(u)
+
+# one horizontal slice: 4x4 points, first pressure level, first time step
+x &lt;- ncvar_get(nc, "o2", start = c(600, 300, 1, 1), count = c(4, 4, 1, 1))
+nc_close(nc)</code></pre>
+
+		<p class="note">Dimensions are reversed relative to Python:
+		<code>(longitude, latitude, mean_pressure, time)</code>.
+		<code>RNetCDF::open.nc()</code> works the same way. There is no Icechunk
+		reader for R, so the store is Python-only.</p>
+
+		<p>Streaming needs a netCDF library built with byte-range support. Most
+		are; to check yours, run the code above &#8212; if it fails with a message
+		about an unknown file format or an inaccessible DAP response, yours is
+		not, and you should download the file first:</p>
+<pre><code>u &lt;- paste0("https://storage.googleapis.com/noaa-oar-gobai/netcdf/v202606/o2/",
+            "GOBAI-O2-HR-v202606_1993-01-01_1994-11-25.nc")
+download.file(u, "gobai.nc", mode = "wb")   # ~7.1 GB
+nc &lt;- nc_open("gobai.nc")</code></pre>
+
+		<p class="note">Files run from about 1.4 to 7.3 GB each, so downloading is
+		worth avoiding where you can.</p>
+		</div>
 		<!-- InstanceEndEditable --> </div>
 </main>
 <footer>
