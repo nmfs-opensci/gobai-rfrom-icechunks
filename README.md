@@ -28,8 +28,8 @@ README has its stream table, metadata decisions and read examples:
 | `nodd.py` | ERDDAP → NODD netCDF batch script, every stream of both products |
 | `build_icechunk.py` | builds and validates the virtual Icechunk stores |
 | `publish_viewer.py` | builds the [gridlook](https://github.com/eeholmes/gridlook) browser viewer and uploads it to `gs://<bucket>/viewer/` |
-| `requirements.txt` | dependencies for `nodd.py` |
-| `requirements-icechunk.txt` | extra dependencies for `build_icechunk.py` |
+| `requirements.lock` | pinned install (exact versions, Python 3.12) for both scripts |
+| `requirements.txt`, `requirements-icechunk.txt` | minimum versions, for other Python versions; `constraints.txt` sets the lock's pins |
 | `setup.md` | full environment setup (also `python nodd.py --setup`) |
 | `setup_bare_VM.txt` | the same setup as copy-paste commands for a fresh VM, through to the production runs |
 | `RFROMV/index.html`, `GOBAI-O2/index.html` | the public landing pages, uploaded to each bucket root |
@@ -40,9 +40,9 @@ README has its stream table, metadata decisions and read examples:
 
 ## Rebuilding from scratch
 
-All of this runs anywhere with Python 3.11+, ~35 GB of scratch disk and a fast
-network. Only uploads need credentials: reading ERDDAP and the public buckets
-is anonymous.
+All of this runs anywhere with Python 3.12 (recommended; 3.11 works), ~35 GB
+of scratch disk and a fast network. Only uploads need credentials: reading
+ERDDAP and the public buckets is anonymous.
 
 ### 1. Environment
 
@@ -51,7 +51,7 @@ git clone https://github.com/nmfs-opensci/gobai-rfrom-icechunks.git
 cd gobai-rfrom-icechunks
 python3 -m venv .venv && source .venv/bin/activate
 pip install -U pip
-pip install -r requirements.txt -r requirements-icechunk.txt
+pip install -r requirements.lock      # pinned versions; needs Python 3.12
 
 export NODD_SCRATCH_DIR="$HOME/nodd-scratch"      # needs ~35 GB free
 gcloud auth application-default login             # an account with write access to the bucket
@@ -148,8 +148,10 @@ The landing pages are cached for an hour. Check an upload with
   is set by hand in `STORES["rfrom_v23"]["realtime_start"]` in
   `build_icechunk.py`. See "Updating the record" in
   [`RFROMV/README.md`](RFROMV/README.md#updating-the-record).
-- **Dependency versions aren't pinned.** The requirements files set minimum
-  versions only, based on what the published data was built with.
+- **Dependencies are pinned for Python 3.12 only.** `requirements.lock` holds
+  the versions the published RFROM v2.3 store was built with. Installing the
+  minimums from `requirements*.txt` instead picks up newer releases. See
+  "Updating the pinned versions" in [`setup.md`](setup.md).
 
 ## Reuse and citation
 

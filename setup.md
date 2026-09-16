@@ -19,22 +19,30 @@ sudo apt-get update && sudo apt-get install -y git curl tmux
 
 ## 1. Python environment
 
-Python 3.11+ (3.12 is what the pipeline was validated on). The dependencies are
-`xarray`, `dask`, `h5netcdf`, `h5py`, `gcsfs`, `pandas`, `numpy`, `requests` —
-all of them ship prebuilt for Linux x86-64 and Apple Silicon either way you
-install, so there is no compiler or system HDF5 to set up; `h5py` is the wheel
-that carries HDF5.
+**Python 3.12 is recommended.** It is what the published data was built with, and
+what the pinned install below targets. 3.11 also works, with the unpinned
+install. The dependencies are `xarray`, `dask`, `h5netcdf`, `h5py`, `gcsfs`,
+`pandas`, `numpy` and `requests`, plus `icechunk`, `virtualizarr`, `zarr` and
+`obstore` for building the store. All of them ship prebuilt for Linux x86-64
+and Apple Silicon, so there is no compiler or system HDF5 to set up; `h5py` is
+the wheel that carries HDF5.
 
 `h5py` is listed explicitly on purpose. It is an *optional extra* of `h5netcdf`
 (`h5netcdf[h5py]`), not a hard dependency, so installing `h5netcdf` alone gives
 you an engine with no HDF5 backend — which fails only on the first file open,
-after a block has already been downloaded (issue #8). Install from one of the
-manifests below rather than by hand and this is taken care of; `nodd.py`
+after a block has already been downloaded (issue #8). Install from the files below rather than by hand and this is taken care of; `nodd.py`
 also checks for it up front and exits before downloading anything.
 
-One manifest is checked in — `requirements.txt`, at the repo root next to
-`nodd.py` — and it covers both products. A bare VM has no venv preinstalled, so
-start from nothing:
+The dependency files are at the repo root and cover both products:
+
+| file | what it is |
+|---|---|
+| `requirements.lock` | **the pinned install** — every package at an exact version, with hashes, for Python 3.12 on Linux and macOS. Covers `nodd.py` and `build_icechunk.py`. |
+| `requirements.txt` | minimum versions for `nodd.py` |
+| `requirements-icechunk.txt` | minimum versions for `build_icechunk.py`, installed alongside `requirements.txt` |
+| `constraints.txt` | the exact versions the lock is built around, and where each one comes from |
+
+A bare VM has no venv preinstalled, so start from nothing:
 
 ```sh
 git clone https://github.com/nmfs-opensci/gobai-rfrom-icechunks.git
@@ -42,12 +50,13 @@ cd gobai-rfrom-icechunks
 ```
 
 A bare Debian/Ubuntu image ships `python3` but usually splits out the `venv` and
-`pip` modules, so install those first — that is the whole prerequisite:
+`pip` modules, so install those first. Ubuntu 24.04's `python3` is 3.12;
+Debian 12's is 3.11, which needs the unpinned install below.
 
 ```sh
 sudo apt-get update
 sudo apt-get install -y python3-venv python3-pip
-python3 --version                        # must be 3.11+
+python3 --version                        # 3.12 recommended; 3.11 works
 
 # RHEL / Amazon Linux instead: sudo dnf install -y python3.12 python3.12-pip
 #   (then use python3.12 in place of python3 below)
@@ -62,8 +71,35 @@ Then create and populate the environment. Make sure the venv is activated
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
-pip install -r requirements.txt
+pip install -r requirements.lock         # Python 3.12: the pinned versions
 ```
+
+On another Python version, or to take newer releases, install the minimums
+instead. That gets whatever is newest, which is what the pinned install exists
+to avoid:
+
+```sh
+pip install -r requirements.txt -r requirements-icechunk.txt
+```
+
+### Updating the pinned versions
+
+`requirements.lock` is generated, never edited by hand. To change a version,
+edit `constraints.txt` (or the minimums in the `requirements*.txt` files), then
+regenerate. This needs [uv](https://docs.astral.sh/uv/), a fast pip
+replacement, but only for whoever regenerates the lock; installing from it
+needs only pip.
+
+```sh
+pip install uv
+uv pip compile --universal --python-version 3.12 --generate-hashes \
+    -c constraints.txt requirements.txt requirements-icechunk.txt -o requirements.lock
+```
+
+`--universal` makes one lock that installs on both Linux and macOS. Before
+committing a new lock, install it into a fresh 3.12 venv and run
+`RFROMV/icechunk-smoke-test.ipynb`. A lock that has never been installed is
+how the missing `h5py` (issue #8) got through.
 
 Re-activate the venv in every new shell (and every new `tmux` pane) — the
 script must run inside it.

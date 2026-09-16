@@ -155,11 +155,11 @@ install line.
 pip install icechunk zarr xarray          # to read the store
 ```
 
-To *build* a store you need the full set, which is **not** in
-[`../requirements.txt`](../requirements.txt) — that file covers `nodd.py` only:
+To *build* a store you need the full set. The pinned install covers it; see
+[`../setup.md`](../setup.md) for the details:
 
 ```sh
-pip install -r ../requirements.txt -r ../requirements-icechunk.txt
+pip install -r ../requirements.lock      # Python 3.12
 ```
 
 ## Reading the published data

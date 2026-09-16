@@ -1,20 +1,19 @@
-# Setup for a bare VM, then process the netCDFs and upload them to NODD
+# Script to setup for a bare VM, then process the netCDFs and upload them to NODD
 #
 # Paste these lines into a terminal a block at a time. Don't run the file with
 # bash: `exec -l $SHELL` restarts the shell partway through, and
 # `gcloud auth application-default login` waits for you to finish in a browser.
 # setup.md explains each step in more detail.
-
 # Needed on every VM, including one cloned from an image (gh is not carried over)
 sudo apt-get update && sudo apt-get install -y gh
 
 #### If you cloned the VM from one already set up, skip down to "Update the repo".
 
 sudo apt-get install -y git curl tmux python3-venv python3-pip
-python3 --version                                  # must be 3.11+
+python3 --version                                  # 3.12 recommended (Ubuntu 24.04 has it)
 
 git clone https://github.com/nmfs-opensci/gobai-rfrom-icechunks.git
-cd ~/gobai-rfrom-icechunks                         # nodd.py and requirements*.txt are at the repo root
+cd ~/gobai-rfrom-icechunks       # nodd.py and the requirements files are at the repo root
 
 git config --global user.email "your@email"
 git config --global user.name "Your Name"
@@ -23,8 +22,9 @@ git config --global pull.rebase false
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -U pip
-pip install -r requirements.txt                    # enough for nodd.py
-pip install -r requirements-icechunk.txt           # only if this VM will also build the Icechunk store
+pip install -r requirements.lock        # pinned versions, Python 3.12
+# not on 3.12? use the minimums instead:
+#pip install -r requirements.txt -r requirements-icechunk.txt
 
 # install gcloud
 curl -fsSL https://sdk.cloud.google.com | bash     # then restart the shell:
@@ -46,7 +46,7 @@ export NODD_SCRATCH_DIR="$HOME/nodd-scratch"      # needs ~35 GB free; use an at
 export NODD_GCS_TOKEN="$HOME/.config/gcloud/application_default_credentials.json"
 df -h "$HOME"                                      # check the free space
 
-# Check write access before a long run. Swap in noaa-oar-gobai / netcdf/v202606 for GOBAI.
+# Check write access before a long run. Swap in noaa-oar-gobai/netcdf/v202606 for GOBAI.
 python -c "
 import gcsfs, os
 fs = gcsfs.GCSFileSystem(token=os.environ['NODD_GCS_TOKEN'])
@@ -64,7 +64,7 @@ cd ~/gobai-rfrom-icechunks && source .venv/bin/activate
 export NODD_SCRATCH_DIR="$HOME/nodd-scratch"
 export NODD_GCS_TOKEN="$HOME/.config/gcloud/application_default_credentials.json"
 
-# Production run: process each stream's netCDFs and upload them to NODD.
+## Production run: process each stream's netCDFs and upload them to NODD. Build Icechunk
 # One stream per VM (or split one stream across VMs with --blocks 0-8 / --blocks 9-17).
 # Blocks already in the bucket are skipped, so rerun the same command after an interruption.
 
@@ -84,6 +84,6 @@ export NODD_GCS_TOKEN="$HOME/.config/gcloud/application_default_credentials.json
 #python nodd.py --stream no3 --all
 
 # After all four RFROM v2.3 streams (or both GOBAI streams) are uploaded, build the
-# virtual Icechunk store. Needs requirements-icechunk.txt; see README.md step 3.
+# virtual Icechunk store (see README.md step 3).
 #python build_icechunk.py --store rfrom_v23
 #python build_icechunk.py --store gobai_hr

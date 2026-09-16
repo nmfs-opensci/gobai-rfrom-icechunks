@@ -13,7 +13,20 @@ holds only `temp`, `sal`, `temp_error` and `sal_error` under `netcdf/v2.3/`.
 The prep notebook now targets `temp` and refuses to overwrite a published
 object.
 
-Still open: items 5 (`CLAUDE.md`) and 8–11, and the GOBAI monthly notebook.
+Item 9 is fixed too. `requirements.lock` pins everything, built by `uv pip compile
+--universal` for Python 3.12 around `constraints.txt`. That file holds the
+versions recorded in `rfromv-icechunk.md` §11; dask, h5netcdf and pandas were
+never recorded, so they are pinned to their validated lower bounds. The lock was
+tested on 2026-09-16 with `pip install -r requirements.lock` into a clean
+Python 3.12.12 venv on the hub, and `pip check` was clean:
+- a full `build_icechunk.py --store gobai_hr --local-repo` build validated (about 10 min);
+- `nodd.py --stream o2 --blocks 17 --no-upload` rebuilt that block. The result
+  matches the published file: identical values (3 levels checked), coords and
+  chunk/compression encoding, with only `history` differing.
+The lock has not been tested on macOS or with a full 100-step block (the hub
+container is capped at ~1.9 GB of memory).
+
+Still open: items 5 (`CLAUDE.md`), 8, 10 and 11, and the GOBAI monthly notebook.
 One more gap turned up while writing the rebuild recipe:
 `build_icechunk.open_repo` passes `GCS_TOKEN` to
 `ic.gcs_storage(application_credentials=...)`, which expects a file path. So
