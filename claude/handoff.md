@@ -3,11 +3,12 @@
 Rolling index of session state. Keep this lean — a pointer to topic notes in
 `claude/notes/`, not a copy of them.
 
-## Repo state (2026-09-16)
+## Repo state (2026-09-17)
 
 - Repo: `nmfs-opensci/gobai-rfrom-icechunks`, at `/home/jovyan/gobai-rfrom-icechunks`.
-- Branch `main`, clean. **No open PRs.** PR #32 (reproducibility review) was
-  squash-merged on 2026-09-16 and its branch deleted, locally and on GitHub.
+- Branch `main`, clean. **No open PRs.** PR #35 (moved the GOBAI-O2 monthly notebook
+  out — see below) was squash-merged on 2026-09-17 and its branch deleted; PR #32
+  (reproducibility review) on 2026-09-16.
 - PRs #29–#31 were **squash-merged**. A branch stacked on an unmerged PR has to be
   rebased onto `main` afterwards (`git rebase --onto origin/main <old tip>`).
 - **Open issues:** #34 (**next task** — see below), #33 (reproducibility
