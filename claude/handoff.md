@@ -45,6 +45,16 @@ Summary; the detail is in `claude/notes/reproducibility-review.md` and
 - **`CLAUDE.md`** was rewritten for the current layout; the old-stream history
   moved to `pipeline-history.md`.
 
+## GOBAI-O2 v2.3 monthly left this repo (2026-09-17)
+
+`GOBAI-O2/gobai-o2-monthly-icechunk-sc.ipynb` was never part of this pipeline — it
+builds the **monthly** NCEI product as a materialized Icechunk store on Source
+Cooperative, which is why CLAUDE.md had to carry a standing "do not mix these"
+warning. It now lives in [`fish-pace/icechunks`](https://github.com/fish-pace/icechunks)
+under `gobai-o2-monthly/`, with a README, a `requirements.txt` and a notebook that runs
+end to end without credentials. Nothing in this repo's pipeline changes; only the
+pointers to it did. Store: `https://data.source.coop/fish-pace/gobai-o2/monthly`.
+
 ## Working principles
 
 - Scripts run on a Linux VM or laptop, not normally on the hub. Don't write

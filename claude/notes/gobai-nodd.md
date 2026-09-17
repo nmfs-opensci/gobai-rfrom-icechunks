@@ -17,10 +17,6 @@ Exactly two datasets:
 | `gobai_o2_hr_v10`  | GOBAI-O2 HR-v1.0  | `o2`  | `GOBAI-O2-HR-v202606-YYYY-MM.nc` |
 | `gobai_no3_hr_v10` | GOBAI-NO3 HR-v1.0 | `no3` | `GOBAI-NO3-HR-v202606-YYYY-MM.nc` |
 
-**Not** the product in `GOBAI-O2/gobai-o2-monthly-icechunk-sc.ipynb` — that is
-GOBAI-O2 **v2.3 monthly** from NCEI, published to Source Cooperative. These are
-**HR-v1.0, weekly**. Do not conflate them or reuse that notebook's chunking.
-
 396 monthly files per dataset, **0.413 TB per dataset**, 1993-01 → 2025-12.
 Use the JSON listing `files/<dataset_id>/.json`; the HTML listing entity-encodes
 every hyphen and dot, so scraping it for `*.nc` silently finds nothing.

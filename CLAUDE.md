@@ -17,10 +17,6 @@ is in `setup.md` and, as copy-paste commands, `setup_bare_VM.txt`.
 | RFROM v2.2 / v2.1 | `temp_v22`, `sal_v22`, `temp_v21` | `noaa-oar-rfrom`, `netcdf/v2.2/`, `v2.1/` | none |
 | GOBAI HR oxygen/nitrate | `o2`, `no3` | `noaa-oar-gobai`, `netcdf/v202606/` | `gobai_hr` → `icechunk/v202606` |
 
-`GOBAI-O2/gobai-o2-monthly-icechunk-sc.ipynb` is an **unrelated** product
-(GOBAI-O2 v2.3 monthly from NCEI → materialized Icechunk on Source
-Cooperative). Do not mix its chunking or metadata with GOBAI HR's.
-
 ## Files
 
 - `nodd.py` — ERDDAP → NODD netCDF batch script for every stream. `STREAMS` is

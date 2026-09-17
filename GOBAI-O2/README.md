@@ -23,13 +23,6 @@ ERDDAP monthly netCDFs
 The 1719-step record splits into **18 blocks** (17 × 100 plus a final 19); output
 files are named e.g. `GOBAI-O2-HR-v202606_1993-01-01_1994-11-25.nc`.
 
-> **Not the same product as `gobai-o2-monthly-icechunk-sc.ipynb` in this
-> directory.** That notebook builds GOBAI-O2 **v2.3 monthly** from NCEI and
-> publishes it to Source Cooperative. This pipeline handles GOBAI **HR-v1.0,
-> weekly** from PMEL ERDDAP, bound for NODD. Different version, different
-> cadence, different source, different destination — do not mix their chunking
-> or metadata decisions.
-
 ## The two product streams
 
 | stream | ERDDAP dataset | data variable | units (source) | NODD prefix |
@@ -291,11 +284,6 @@ the store is Python-only.
   ["Reading the published data"](#reading-the-published-data) above, and note
   that it is CDN-cached for an hour — verify an upload with `?cb=$RANDOM` or a
   stale copy reads as a failed upload.
-
-### Unrelated to this pipeline
-
-- **`gobai-o2-monthly-icechunk-sc.ipynb`** — the GOBAI-O2 v2.3 monthly → Source
-  Cooperative Icechunk build. A different product; see the note above.
 
 ## Why one script for two products
 
