@@ -134,6 +134,10 @@ The issue lists the known traps. Read `rfromv-icechunk.md` and
 - `unsafe_use_metadata` on the Icechunk storage settings is not enabled;
   `rebase_tries=0` makes failures loud instead. Revisit if commits ever fail
   for real.
-- **Project memory on this hub is not symlinked** into `~/claude-config`
-  (`eeholmes/claude-config#1`). Mirror memory edits by hand, and don't re-run
-  `bootstrap.sh` here until that is resolved.
+- **This project's memory is now symlinked** into `~/claude-config`
+  (`claude/memory/-home-jovyan-gobai-rfrom-icechunks/`), as of 2026-09-17, so edits land
+  in the repo and only need committing — no hand mirroring. `icechunks`, `agent-skills`,
+  `xpublish-erddap` and `ohw24-…` are linked too.
+  **`gridlook` is still a real directory whose contents have diverged from the repo copy
+  (`eeholmes/claude-config#1`), so do not run `bootstrap.sh` here** — it would move the
+  hub's gridlook memories aside and link the repo's different set in their place.
