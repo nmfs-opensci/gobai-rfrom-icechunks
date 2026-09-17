@@ -14,9 +14,7 @@ Covers two products that share a grid and therefore share this pipeline:
 
 GOBAI HR is built on RFROM, and its latitude / longitude / mean_pressure /
 mean_pressure_bnds coordinates are *identical* to RFROM v2.3's, on the same
-weekly time grid -- so one code path serves both. (Note this is GOBAI **HR-v1.0
-weekly**, not the v2.3 monthly product from NCEI that
-``GOBAI-O2/gobai-o2-monthly-icechunk-sc.ipynb`` publishes to Source Cooperative.)
+weekly time grid -- so one code path serves both.
 
 This is the script form of the tested single-file notebook
 ``RFROMV/prep-one-netcdf-for-NODD.ipynb``. Per output file the pipeline is:

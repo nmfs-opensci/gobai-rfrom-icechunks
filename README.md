@@ -35,7 +35,6 @@ README has its stream table, metadata decisions and read examples:
 | `RFROMV/index.html`, `GOBAI-O2/index.html` | the public landing pages, uploaded to each bucket root |
 | `RFROMV/prep-one-netcdf-for-NODD.ipynb` | step-by-step walkthrough of one block — explains *why*, not needed to rebuild |
 | `RFROMV/icechunk-smoke-test.ipynb` | builds a small local store and checks it; run before a real store build |
-| `GOBAI-O2/gobai-o2-monthly-icechunk-sc.ipynb` | a **different** product (GOBAI-O2 v2.3 monthly → Source Cooperative); not part of the pipeline below |
 | `claude/notes/` | design records: why each choice was made, with measurements |
 
 ## Rebuilding from scratch
