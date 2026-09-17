@@ -138,6 +138,8 @@ The issue lists the known traps. Read `rfromv-icechunk.md` and
   (`claude/memory/-home-jovyan-gobai-rfrom-icechunks/`), as of 2026-09-17, so edits land
   in the repo and only need committing — no hand mirroring. `icechunks`, `agent-skills`,
   `xpublish-erddap` and `ohw24-…` are linked too.
-  **`gridlook` is still a real directory whose contents have diverged from the repo copy
-  (`eeholmes/claude-config#1`), so do not run `bootstrap.sh` here** — it would move the
-  hub's gridlook memories aside and link the repo's different set in their place.
+  `gridlook`'s two diverged sets were merged and linked the same day, so **every
+  content-bearing memory directory on this hub is now a symlink into the repo** and
+  `bootstrap.sh` is safe to run again. What `eeholmes/claude-config#1` still tracks is the
+  root cause: bootstrap links repo → hub only, so a memory directory first created on a
+  hub is never adopted.
