@@ -275,6 +275,11 @@ the store is Python-only.
 - **`../publish_viewer.py`** — builds the gridlook viewer and uploads it to
   `gs://noaa-oar-gobai/viewer/`. See ["Viewing in a browser"](#viewing-in-a-browser).
 - **`README.md`** — this file.
+- **`gobai-o2-oxygen-niche-demo.ipynb`** — a short demo
+  ([open in Colab](https://colab.research.google.com/github/nmfs-opensci/gobai-rfrom-icechunks/blob/main/GOBAI-O2/gobai-o2-oxygen-niche-demo.ipynb)):
+  opens the store, maps the depth where O₂ first drops below 60 µmol kg⁻¹ over the
+  Bering Sea, and plots that depth weekly over 1993–2025 for the Aleutian Basin. Runs
+  in about a minute with only `icechunk`, `xarray`, `zarr`, `dask` and `matplotlib`.
 
 - **`index.html`** — the public landing page, uploaded to
   `gs://noaa-oar-gobai/index.html` and served at
