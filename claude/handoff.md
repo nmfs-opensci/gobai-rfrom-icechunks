@@ -63,7 +63,7 @@ modelled on the HYCOM Bering Sea snow crab notebook in `ocean-icechunks/hycom`. 
 issue #36 and PR #37, merged 2026-09-29, and the GOBAI-O2 README links to it. It maps the
 depth where O₂ first drops below 60 µmol kg⁻¹ over the Bering Sea, and plots that depth
 weekly over 1993–2025 for the Aleutian Basin (54–58°N, 180–188°E). It ran in 67 s in a
-clean venv and has not been tried on Colab.
+clean venv, and Eli confirmed it works on Colab (2026-09-29).
 
 Facts worth keeping:
 - **GOBAI HR has no values on the Bering shelf** (all NaN at every level), so bottom O₂ on
