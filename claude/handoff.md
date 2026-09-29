@@ -56,6 +56,22 @@ under `gobai-o2-monthly/`, with a README, a `requirements.txt` and a notebook th
 end to end without credentials. Nothing in this repo's pipeline changes; only the
 pointers to it did. Store: `https://data.source.coop/fish-pace/gobai-o2/monthly`.
 
+## GOBAI-O2 demo notebook (2026-09-29)
+
+`GOBAI-O2/gobai-o2-oxygen-niche-demo.ipynb` is a short Colab demo that Eli asked for,
+modelled on the HYCOM Bering Sea snow crab notebook in `ocean-icechunks/hycom`. It came from
+issue #36 and PR #37, merged 2026-09-29, and the GOBAI-O2 README links to it. It maps the
+depth where O₂ first drops below 60 µmol kg⁻¹ over the Bering Sea, and plots that depth
+weekly over 1993–2025 for the Aleutian Basin (54–58°N, 180–188°E). It ran in 67 s in a
+clean venv and has not been tried on Colab.
+
+Facts worth keeping:
+- **GOBAI HR has no values on the Bering shelf** (all NaN at every level), so bottom O₂ on
+  the crab grounds was not possible.
+- Longitude is 0–360 in this store, so the Bering Sea needs no stitching across the dateline.
+- With chunks of `(100, 1, 180, 180)`, a long time series over a small box is cheap and a map
+  is the expensive read. Keep a box inside one 45° chunk.
+
 ## Working principles
 
 - Scripts run on a Linux VM or laptop, not normally on the hub. Don't write
