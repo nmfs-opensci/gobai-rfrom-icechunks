@@ -76,7 +76,7 @@ Facts worth keeping:
 
 - Scripts run on a Linux VM or laptop, not normally on the hub. Don't write
   hub paths into defaults or docs.
-- Eli can't copy from the TUI — write anything he must paste into a file under
+- Eli can't copy from the TUI — write anything she must paste into a file under
   `/home/jovyan/`.
 - **Every new task branches and ends in a PR**, including tasks given in chat.
   Only `AGENTS.md` (formerly `CLAUDE.md`, which now just imports it) and
