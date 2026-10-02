@@ -79,8 +79,9 @@ Facts worth keeping:
 - Eli can't copy from the TUI — write anything he must paste into a file under
   `/home/jovyan/`.
 - **Every new task branches and ends in a PR**, including tasks given in chat.
-  Only `CLAUDE.md` and `claude/` commit straight to `main`. The exception is a
-  `CLAUDE.md` change that describes unmerged work: that goes in the PR.
+  Only `AGENTS.md` (formerly `CLAUDE.md`, which now just imports it) and
+  `claude/` commit straight to `main`. The exception is an `AGENTS.md` change
+  that describes unmerged work: that goes in the PR.
 - Resolved decisions get edited into the PR body, not just here.
 - Unfixed findings → a GitHub issue (a checklist issue like #33 is fine for small ones).
 
