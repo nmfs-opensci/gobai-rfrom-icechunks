@@ -78,10 +78,11 @@ Facts worth keeping:
   hub paths into defaults or docs.
 - Eli can't copy from the TUI — write anything she must paste into a file under
   `/home/jovyan/`.
-- **Every new task branches and ends in a PR**, including tasks given in chat.
-  Only `AGENTS.md` (formerly `CLAUDE.md`, which now just imports it) and
-  `agent/` and `docs/design/` commit straight to `main`. The exception is an `AGENTS.md` change
-  that describes unmerged work: that goes in the PR.
+- **Every change branches and ends in a PR**, including tasks given in chat and
+  doc-only edits to `AGENTS.md`, `agent/` and `docs/design/`. The global git
+  hook blocks pushes to `main`; the old direct-to-main exception for docs was
+  dropped on 2026-11-10. An `AGENTS.md` change that describes unmerged work goes
+  in that work's PR.
 - Resolved decisions get edited into the PR body, not just here.
 - Unfixed findings → a GitHub issue (a checklist issue like #33 is fine for small ones).
 
