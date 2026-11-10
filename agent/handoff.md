@@ -3,12 +3,15 @@
 Rolling index of session state. Keep this lean — a pointer to topic notes in
 `docs/design/`, not a copy of them.
 
-## Repo state (2026-09-17)
+## Repo state (2026-11-10)
 
 - Repo: `nmfs-opensci/gobai-rfrom-icechunks`, at `/home/jovyan/gobai-rfrom-icechunks`.
-- Branch `main`, clean. **No open PRs.** PR #35 (moved the GOBAI-O2 monthly notebook
-  out — see below) was squash-merged on 2026-09-17 and its branch deleted; PR #32
-  (reproducibility review) on 2026-09-16.
+- Branch `main`, clean. **No open PRs** other than this handoff's. #39–#41 merged
+  2026-11-10 (see "Session 2026-11-10" below).
+- **History was rewritten on 2026-11-10** (`git-filter-repo`, messages only;
+  every tree is unchanged). All commit hashes changed, so any clone made before
+  then must be replaced, not pulled. Merged PR pages on GitHub still show the
+  old commits under `refs/pull/N/head`; only GitHub Support can remove those.
 - PRs #29–#31 were **squash-merged**. A branch stacked on an unmerged PR has to be
   rebased onto `main` afterwards (`git rebase --onto origin/main <old tip>`).
 - **Open issues:** #34 (**next task** — see below), #33 (reproducibility
@@ -19,6 +22,26 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
   `gs://noaa-oar-gobai/` holds `netcdf/v202606/{o2,no3}`, `icechunk/v202606`
   (snapshot `MD92HF22BRCTRF47BR60`), `index.html` and `viewer/`. Both products
   are fully published. The RFROM viewer has not been opened in a browser yet.
+  Both `index.html` files were re-uploaded 2026-11-10 without logos or footer.
+
+## Session 2026-11-10
+
+- **Landing pages** (#39): the NOAA and PMEL header logos and the whole footer
+  are gone from both `index.html` files, at Eli's request. That removed the
+  footer's Privacy Policy / Disclaimer links and RFROM's contact line too; not
+  restored. The pages still load `gobai.css`, the favicon and the animations
+  from pmel.noaa.gov.
+- **Vendor-neutral agent files.** Work is sensitive about "claude" appearing in
+  repos, and Eli uses several harnesses. `claude/notes/` → `docs/design/`,
+  `claude/handoff.md` → `agent/handoff.md`, hub harness notes →
+  `agent/harness-config.md`. `CLAUDE.md` stays as the `@AGENTS.md` import shim.
+- **History rewrite**: `Co-Authored-By: Claude …` trailers became
+  `Co-Authored-By: Agent <agent@noreply.invalid>`, `Claude-Session:` lines were
+  dropped, and message prose naming Claude was reworded. The 20 PR descriptions
+  were edited the same way (GitHub keeps their edit history). New commits get the
+  same trailer from the user-level `attribution` setting in `~/claude-config`.
+- **Every change goes through a PR** (#41), docs included — see Working
+  principles.
 
 ## What PR #32 changed (merged)
 
@@ -85,6 +108,9 @@ Facts worth keeping:
   in that work's PR.
 - Resolved decisions get edited into the PR body, not just here.
 - Unfixed findings → a GitHub issue (a checklist issue like #33 is fine for small ones).
+- **Vendor-neutral names** in anything new: `agent/`, `docs/`, the `Agent`
+  trailer. Not to hide AI use (work encourages it), but so the repo reads the same
+  whichever harness is used.
 
 ## Next task
 
@@ -135,6 +161,9 @@ The issue lists the known traps. Read `rfromv-icechunk.md` and
 - **Don't `--force` a published netCDF casually.** The store references byte
   ranges inside it.
 - **`index.html` is CDN-cached for an hour.** Verify uploads with `?cb=$RANDOM`.
+  There is no `gcloud` on the hub: upload with `gcsfs` and the ADC file
+  (`fs.put_file(local, "<bucket>/index.html", content_type="text/html")`), then
+  read it back with credentials and compare bytes.
 - **`npm run build` of gridlook is OOM-killed on the hub.** `publish_viewer.py`
   uses `vite build --sourcemap false` with a 500 MB heap. To republish, run
   `python publish_viewer.py --product gobai --build ~/gridlook`, then
