@@ -151,13 +151,5 @@ The issue lists the known traps. Read `rfromv-icechunk.md` and
 - `unsafe_use_metadata` on the Icechunk storage settings is not enabled;
   `rebase_tries=0` makes failures loud instead. Revisit if commits ever fail
   for real.
-- Harness setup on the hub is in `agent/harness-config.md`.
-- **This project's memory is now symlinked** into `~/claude-config`
-  (`claude/memory/-home-jovyan-gobai-rfrom-icechunks/`), as of 2026-09-17, so edits land
-  in the repo and only need committing — no hand mirroring. `icechunks`, `agent-skills`,
-  `xpublish-erddap` and `ohw24-…` are linked too.
-  `gridlook`'s two diverged sets were merged and linked the same day, so **every
-  content-bearing memory directory on this hub is now a symlink into the repo** and
-  `bootstrap.sh` is safe to run again. What `eeholmes/claude-config#1` still tracks is the
-  root cause: bootstrap links repo → hub only, so a memory directory first created on a
-  hub is never adopted.
+- Harness setup on the hub, including where memory lives (it is **not** backed up
+  as of 2026-11-10), is in `agent/harness-config.md`.
