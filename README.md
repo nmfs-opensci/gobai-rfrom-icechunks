@@ -35,7 +35,8 @@ README has its stream table, metadata decisions and read examples:
 | `RFROMV/index.html`, `GOBAI-O2/index.html` | the public landing pages, uploaded to each bucket root |
 | `RFROMV/prep-one-netcdf-for-NODD.ipynb` | step-by-step walkthrough of one block — explains *why*, not needed to rebuild |
 | `RFROMV/icechunk-smoke-test.ipynb` | builds a small local store and checks it; run before a real store build |
-| `claude/notes/` | design records: why each choice was made, with measurements |
+| `docs/design/` | design records: why each choice was made, with measurements |
+| `AGENTS.md`, `agent/` | instructions and session state for coding agents (`CLAUDE.md` just imports `AGENTS.md`) |
 
 ## Rebuilding from scratch
 
@@ -119,7 +120,7 @@ The build validates the store against the source netCDFs before it returns.
 snapshot**, because the bucket's CDN caches the store's metadata. Check the new
 store with credentials, and don't delete anything because of a stale anonymous
 read. Details are in §3–4 of
-[`claude/notes/gobai-icechunk.md`](claude/notes/gobai-icechunk.md).
+[`docs/design/gobai-icechunk.md`](docs/design/gobai-icechunk.md).
 
 ### 4. Landing pages and viewer
 

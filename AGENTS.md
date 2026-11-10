@@ -1,9 +1,10 @@
 # AGENTS.md
 
 Instructions for coding agents working in this repository. `CLAUDE.md` contains
-only `@AGENTS.md`, so Claude Code reads this file too; edit `AGENTS.md`, not
-`CLAUDE.md`. Session state and topic notes are in `claude/handoff.md` and
-`claude/notes/`.
+only `@AGENTS.md`, so harnesses that read `CLAUDE.md` see this file too; edit
+`AGENTS.md`, not `CLAUDE.md`. Agent session state is in `agent/` (start with
+`agent/handoff.md`); the design records, why each choice was made, are in
+`docs/design/`.
 
 ## What this repository is
 
@@ -66,7 +67,7 @@ where two overlap. File names carry a mode infix naming what is inside:
 block. So **lexical order is not time order** (`build_icechunk.block_start`
 sorts on the dates), and a name changes when PMEL settles provisional weeks.
 The history of why the streams are joined is in
-`claude/notes/pipeline-history.md`.
+`docs/design/pipeline-history.md`.
 
 ### Constraints that are easy to break
 
@@ -102,7 +103,7 @@ The history of why the streams are joined is in
   `long_name` for GOBAI only; RFROM was published without it. `comment =
   "preliminary"` and the "in prep." `references` are passed through verbatim.
 
-Details: `claude/notes/nodd-batch-script.md`, `gobai-nodd.md`,
+Details: `docs/design/nodd-batch-script.md`, `gobai-nodd.md`,
 `rfromv-v21-v22-nodd.md`.
 
 ## The Icechunk stores
@@ -127,7 +128,7 @@ errors.
 - Reading needs `icechunk`, `zarr` and `xarray`. `virtualizarr` is build-time
   only.
 
-Read `claude/notes/rfromv-icechunk.md` and `gobai-icechunk.md` before any store
+Read `docs/design/rfromv-icechunk.md` and `gobai-icechunk.md` before any store
 work.
 
 ## Chunking reference numbers
@@ -139,4 +140,4 @@ work.
 - GOBAI-O2 Icechunk notebook: `time:14, pres:2, lat:73, lon:120`.
 - For a `(T, 1, Y, X)` chunk, a global map read costs `4.15 MB × T` and a point
   time series costs `1719 × Y·X·4` bytes, so no single grid serves both
-  (`claude/notes/rfromv-icechunk.md` §7–8).
+  (`docs/design/rfromv-icechunk.md` §7–8).

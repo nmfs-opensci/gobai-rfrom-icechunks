@@ -16,7 +16,7 @@ WHY THE SOURCE FILES MUST BE CHUNKED THE WAY THEY ARE
 -----------------------------------------------------
 A virtual store cannot rewrite chunks, so every file feeding one array must share
 one chunk grid. Two consequences drove the netCDF layout (see
-claude/notes/rfromv-icechunk.md):
+docs/design/rfromv-icechunk.md):
 
   * Each variable must be ONE continuous series of files. RFROM publishes
     temperature as a stable record plus a realtime extension; if those stayed
@@ -599,7 +599,7 @@ def build(store_name, local_repo=None, validate_after=True, workers=8):
 def main(argv=None):
     p = argparse.ArgumentParser(
         description=__doc__.split("\n\n")[0],
-        epilog="See claude/notes/rfromv-icechunk.md for the design decisions.",
+        epilog="See docs/design/rfromv-icechunk.md for the design decisions.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p.add_argument("--store", choices=sorted(STORES), required=True)

@@ -139,7 +139,7 @@ Run [`icechunk-smoke-test.ipynb`](icechunk-smoke-test.ipynb) first — it builds
 small store into a local throwaway repository and checks the values against the
 source netCDFs. The design decisions, the measurements behind them, and the
 reader recipe are in
-[`../claude/notes/rfromv-icechunk.md`](../claude/notes/rfromv-icechunk.md).
+[`../docs/design/rfromv-icechunk.md`](../docs/design/rfromv-icechunk.md).
 
 Two constraints the netCDFs must satisfy, both enforced with named errors:
 every file feeding one variable shares one chunk grid, and only the **last** file
@@ -178,7 +178,7 @@ re-encode them. **The store reads from zarr-python; other Zarr implementations
 may refuse it.** zarr-python emits a warning to this effect on every build and
 open — it is expected, and there is nothing to fix in the store. Background and
 the fallback plan are in §8 of
-[`../claude/notes/rfromv-icechunk.md`](../claude/notes/rfromv-icechunk.md).
+[`../docs/design/rfromv-icechunk.md`](../docs/design/rfromv-icechunk.md).
 
 **Reading needs `icechunk`, `zarr` and `xarray` — not `virtualizarr`.**
 VirtualiZarr is a *build*-time dependency: it parses the HDF5 headers into chunk
@@ -229,7 +229,7 @@ Expect the first map to take a while. The store inherits the netCDFs' chunks,
 `(100, 1, 180, 180)`, so one global map at one level downloads ~131 MB, and
 moving to another 100-week block downloads that much again. Steps within a
 block are cached. See §7–§8 of
-[`../claude/notes/rfromv-icechunk.md`](../claude/notes/rfromv-icechunk.md).
+[`../docs/design/rfromv-icechunk.md`](../docs/design/rfromv-icechunk.md).
 
 The viewer is published by [`../publish_viewer.py`](../publish_viewer.py)
 (`--product rfrom`); its docstring covers building gridlook and uploading it.
@@ -440,8 +440,8 @@ load-bearing and must not regress:
   help). This is decoupled from the on-disk `chunksizes` in `encoding`.
 
 The rationale for every stage is written up in
-[`../claude/notes/nodd-prep.md`](../claude/notes/nodd-prep.md) and
-[`../claude/notes/nodd-batch-script.md`](../claude/notes/nodd-batch-script.md).
+[`../docs/design/nodd-prep.md`](../docs/design/nodd-prep.md) and
+[`../docs/design/nodd-batch-script.md`](../docs/design/nodd-batch-script.md).
 
 ## Not yet built
 

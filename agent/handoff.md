@@ -1,7 +1,7 @@
 # Handoff
 
 Rolling index of session state. Keep this lean — a pointer to topic notes in
-`claude/notes/`, not a copy of them.
+`docs/design/`, not a copy of them.
 
 ## Repo state (2026-09-17)
 
@@ -23,7 +23,7 @@ Rolling index of session state. Keep this lean — a pointer to topic notes in
 ## What PR #32 changed (merged)
 
 The goal was that a newcomer can rebuild the netCDFs and stores from the docs.
-Summary; the detail is in `claude/notes/reproducibility-review.md` and
+Summary; the detail is in `docs/design/reproducibility-review.md` and
 `pipeline-history.md`:
 
 - **Root README:** a "Rebuilding from scratch" recipe, a file map, and a reuse
@@ -43,14 +43,14 @@ Summary; the detail is in `claude/notes/reproducibility-review.md` and
   Icechunk's `from_env=True`).
 - **`setup_bare_VM.txt`** moved to the repo root and is now **maintained**,
   updated to the current commands. The old "don't tidy it" rule is withdrawn.
-- **`CLAUDE.md`** was rewritten for the current layout; the old-stream history
-  moved to `pipeline-history.md`.
+- **`AGENTS.md`** (then named `CLAUDE.md`) was rewritten for the current layout;
+  the old-stream history moved to `pipeline-history.md`.
 
 ## GOBAI-O2 v2.3 monthly left this repo (2026-09-17)
 
 `GOBAI-O2/gobai-o2-monthly-icechunk-sc.ipynb` was never part of this pipeline — it
 builds the **monthly** NCEI product as a materialized Icechunk store on Source
-Cooperative, which is why CLAUDE.md had to carry a standing "do not mix these"
+Cooperative, which is why the agent instructions had to carry a standing "do not mix these"
 warning. It now lives in [`fish-pace/icechunks`](https://github.com/fish-pace/icechunks)
 under `gobai-o2-monthly/`, with a README, a `requirements.txt` and a notebook that runs
 end to end without credentials. Nothing in this repo's pipeline changes; only the
@@ -80,7 +80,7 @@ Facts worth keeping:
   `/home/jovyan/`.
 - **Every new task branches and ends in a PR**, including tasks given in chat.
   Only `AGENTS.md` (formerly `CLAUDE.md`, which now just imports it) and
-  `claude/` commit straight to `main`. The exception is an `AGENTS.md` change
+  `agent/` and `docs/design/` commit straight to `main`. The exception is an `AGENTS.md` change
   that describes unmerged work: that goes in the PR.
 - Resolved decisions get edited into the PR body, not just here.
 - Unfixed findings → a GitHub issue (a checklist issue like #33 is fine for small ones).
@@ -151,6 +151,7 @@ The issue lists the known traps. Read `rfromv-icechunk.md` and
 - `unsafe_use_metadata` on the Icechunk storage settings is not enabled;
   `rebase_tries=0` makes failures loud instead. Revisit if commits ever fail
   for real.
+- Harness setup on the hub is in `agent/harness-config.md`.
 - **This project's memory is now symlinked** into `~/claude-config`
   (`claude/memory/-home-jovyan-gobai-rfrom-icechunks/`), as of 2026-09-17, so edits land
   in the repo and only need committing — no hand mirroring. `icechunks`, `agent-skills`,

@@ -3,7 +3,7 @@
 > **Historical.** This records the original six-stream design. RFROM v2.3 now
 > publishes four streams (`temp`, `sal`, `temp_error`, `sal_error`), and the
 > script is `nodd.py` at the repo root. See `pipeline-history.md` ("six streams
-> → four") and `CLAUDE.md` for the current layout.
+> → four") and `AGENTS.md` for the current layout.
 
 Goal: turn the tested single-file notebook
 `RFROMV/prep-one-netcdf-for-NODD.ipynb` into a script that processes **all**
@@ -84,7 +84,7 @@ overrides `sal_stable`/`sal_realtime` output to `sea_water_absolute_salinity` /
 ## What to carry over from the notebook UNCHANGED (do not regress)
 
 These are the hard-won correctness/performance fixes — see
-`claude/notes/nodd-prep.md` for the why:
+`docs/design/nodd-prep.md` for the why:
 
 - `open_mfdataset(..., engine="h5netcdf", combine="by_coords",
   data_vars="minimal", coords="minimal", compat="override",

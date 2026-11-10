@@ -12,7 +12,7 @@ the URL *fragment* (after ``#``), which the bucket never sees:
 
 Viewer and store sharing one bucket means the browser needs nothing beyond the
 bucket's existing CORS policy (GET/HEAD from any origin, with ``Range`` in
-``responseHeader`` -- see claude/notes/rfromv-icechunk.md §8).
+``responseHeader`` -- see docs/design/rfromv-icechunk.md §8).
 
 Steps
 -----

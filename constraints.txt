@@ -1,7 +1,7 @@
 # Exact versions for requirements.lock -- see setup.md, "Pinned install".
 #
 # Recorded versions the published RFROM v2.3 Icechunk store was built and
-# validated with (claude/notes/rfromv-icechunk.md, §11 "Versions"), on Python 3.12.12.
+# validated with (docs/design/rfromv-icechunk.md, §11 "Versions"), on Python 3.12.12.
 icechunk==2.2.0
 virtualizarr==2.2.1
 xarray==2025.12.0

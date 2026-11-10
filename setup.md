@@ -251,6 +251,6 @@ one pressure plane at a time (~415 MB per chunk, a few in flight at once).
 - `python nodd.py --help` — every flag, with the full stream list and defaults.
 - [`RFROMV/README.md`](RFROMV/README.md) / [`GOBAI-O2/README.md`](GOBAI-O2/README.md)
   — per-product quickstart, stream tables, and CF metadata notes.
-- [`claude/notes/nodd-prep.md`](claude/notes/nodd-prep.md) and
-  [`claude/notes/nodd-batch-script.md`](claude/notes/nodd-batch-script.md) — the
+- [`docs/design/nodd-prep.md`](docs/design/nodd-prep.md) and
+  [`docs/design/nodd-batch-script.md`](docs/design/nodd-batch-script.md) — the
   rationale behind each pipeline stage and design decision.

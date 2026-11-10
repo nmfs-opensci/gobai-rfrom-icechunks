@@ -27,7 +27,7 @@ The lock has not been tested on macOS or with a full 100-step block (the hub
 container is capped at ~1.9 GB of memory).
 
 Still open: items 8, 10 and 11, and the GOBAI monthly notebook.
-Item 5 is fixed too: `CLAUDE.md` was rewritten around the current layout, and
+Item 5 is fixed too: the agent instructions (`AGENTS.md`) were rewritten around the current layout, and
 the old-stream history moved to `pipeline-history.md`.
 
 A gap found while writing the rebuild recipe is also fixed.
@@ -40,7 +40,7 @@ Question asked: could someone new to this repo work out exactly how to rebuild
 the NODD netCDFs and the virtual Icechunk stores? Short answer: **mostly, but
 not from any one page, and some of the paths they would find first are wrong.**
 All the needed information exists. It is spread across the root README, `setup.md`,
-two product READMEs, `CLAUDE.md` and script docstrings, and several of those
+two product READMEs, `AGENTS.md` and script docstrings, and several of those
 still describe the superseded six-stream RFROM layout.
 
 Checked by reading every doc and script, running `nodd.py --list` and
@@ -79,7 +79,7 @@ current Python (3.11.14).
    blocks", `setup.md`'s resource table says RFROM has 17 blocks, and the
    `nodd.py` docstring says "v2.3 (six streams)". The current RFROM v2.3 record
    is 1719 steps in 18 blocks.
-5. **`CLAUDE.md` opening is stale.** It says there is "no build system" and that
+5. **`AGENTS.md` opening is stale.** It says there is "no build system" and that
    the deliverables are notebooks. The deliverables are now the scripts.
 6. **Root README.** The title says `gobai-icechunks` rather than the repo name.
    The `## Chunking` section is unfinished scratch notes. There is no

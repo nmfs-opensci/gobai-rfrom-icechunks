@@ -23,7 +23,7 @@ This is the script form of the tested single-file notebook
     block -> CF metadata fix -> rechunk (100,1,180,180) + zlib-4/shuffle
     -> upload to gs://<bucket>/netcdf/<version>/<stream>/
 
-Operational model (see claude/notes/nodd-batch-script.md): streams are run ONE AT
+Operational model (see docs/design/nodd-batch-script.md): streams are run ONE AT
 A TIME, likely on several VMs in parallel (one VM per stream, or one VM per block
 range). The script therefore:
 
@@ -61,7 +61,7 @@ prefixed names are still honoured. Run ``--setup`` (or see setup.md) for the
 venv + credentials walkthrough.
 
 The hard-won correctness / performance choices from the notebook are preserved
-verbatim; see claude/notes/nodd-prep.md for the why. In short: open with
+verbatim; see docs/design/nodd-prep.md for the why. In short: open with
 ``data_vars="minimal", coords="minimal", compat="override"`` so ``mean_pressure_bnds``
 is not broadcast against time (do NOT alter the source data), and read with dask
 ``chunks={"mean_pressure": 1}`` (contiguous lat/lon planes) so the write is not
@@ -255,7 +255,7 @@ STREAMS = {
     # would put a 70-long chunk in the MIDDLE of the merged time axis -- illegal
     # in Zarr no matter how the netCDFs are written. Merging the two records at
     # the netCDF layer is what makes the store possible at all. See
-    # claude/notes/rfromv-icechunk.md.
+    # docs/design/rfromv-icechunk.md.
     "temp": {
         "product": "rfrom",
         "data_var": "ocean_temperature",
@@ -352,7 +352,7 @@ STREAMS = {
     # --- GOBAI HR (two streams) ---------------------------------------------- #
     #
     # Confirmed against ERDDAP and against one downloaded monthly file of each
-    # dataset, 2026-09-03 (claude/notes/gobai-nodd.md). Same grid, dims and
+    # dataset, 2026-09-03 (docs/design/gobai-nodd.md). Same grid, dims and
     # mean_pressure_bnds as RFROM above; 1719 weekly steps -> 18 blocks.
     #
     # standard_name notes: neither netCDF file carries a standard_name for its

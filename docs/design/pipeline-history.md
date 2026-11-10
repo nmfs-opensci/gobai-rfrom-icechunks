@@ -1,6 +1,6 @@
 # Pipeline history — resolved work worth not re-deriving
 
-Detail moved out of `claude/handoff.md` when it got long. Everything here is
+Detail moved out of `agent/handoff.md` when it got long. Everything here is
 **done and merged**; the handoff keeps one line per item and points here. Notes
 with their own file (`nodd-prep.md`, `nodd-batch-script.md`, `gobai-nodd.md`,
 `rfromv-v21-v22-nodd.md`, `rfromv-icechunk.md`) are not duplicated.
@@ -53,26 +53,6 @@ Measured on the live `temp_stable` run: ~23 GB downloaded and ~7.6 GB written pe
 block, ~31 GB peak scratch, ~390 GB down / ~130 GB up per stable stream.
 **Wall-clock is network-bound, so a bigger instance does not help.** Confirmed on
 a bare VM: `gcloud auth application-default set-quota-project` is *not* needed.
-
-## Claude Code configuration on this hub
-
-Not RFROM work, but it bites if assumed. The portable config lives in the
-`~/claude-config` repo, symlinked into `~/.claude` by `bootstrap.sh`. Auth and
-account toggling (personal vs Bedrock) is machine-local in `~/.bashrc` /
-`~/.profile`, with back-out steps in `~/claude-bedrock-toggle-notes.md` (no
-credentials in it).
-
-On **this** hub `~/.claude/settings.json` is a standalone real file, not
-bootstrapped: edit it directly *and* mirror portable changes into
-`~/claude-config/claude/settings.json`.
-
-A non-destructive-git guard is enforced by deny rules plus a
-`deny-destructive-git.py` hook — hard resets and force pushes are blocked.
-
-**Project memory on this hub is not symlinked into `~/claude-config`**, so it is
-unbacked, and `gridlook`'s two copies have diverged into disjoint sets. Tracked
-as `eeholmes/claude-config#1`, which also warns against re-running
-`bootstrap.sh` here until that is merged.
 
 ## Cleanups (issues #15, #16)
 

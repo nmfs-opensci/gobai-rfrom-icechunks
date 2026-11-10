@@ -91,7 +91,7 @@ This is the same machinery as RFROM v2.3 (GitHub issue #17), because GOBAI HR
 shares RFROM's grid and block layout; the `gobai_hr` entry in `STORES` differs
 only in bucket, prefixes and variables. The design decisions, the measurements
 behind them and the reader recipe are in
-[`../claude/notes/rfromv-icechunk.md`](../claude/notes/rfromv-icechunk.md) —
+[`../docs/design/rfromv-icechunk.md`](../docs/design/rfromv-icechunk.md) —
 read that rather than rediscovering them. Two differences from RFROM:
 
 - **No `data_mode` coordinate.** GOBAI HR has no stable/realtime split, so
@@ -137,7 +137,7 @@ v3 registry rather than core spec codecs. **The store reads from zarr-python;
 other Zarr implementations may refuse it.** zarr-python warns to this effect on
 every build and open — expected, and nothing to fix in the store. Background and
 the fallback plan are in §8 of
-[`../claude/notes/rfromv-icechunk.md`](../claude/notes/rfromv-icechunk.md).
+[`../docs/design/rfromv-icechunk.md`](../docs/design/rfromv-icechunk.md).
 
 **Reading needs `icechunk`, `zarr` and `xarray` — not `virtualizarr`.**
 VirtualiZarr is a *build*-time dependency: it parses the HDF5 headers into chunk
@@ -188,7 +188,7 @@ Expect the first map to take a while. The store inherits the netCDFs' chunks,
 `(100, 1, 180, 180)`, so one global map at one level downloads ~131 MB, and
 moving to another 100-week block downloads that much again. Steps within a
 block are cached. See §7–§8 of
-[`../claude/notes/rfromv-icechunk.md`](../claude/notes/rfromv-icechunk.md).
+[`../docs/design/rfromv-icechunk.md`](../docs/design/rfromv-icechunk.md).
 
 The viewer is published by [`../publish_viewer.py`](../publish_viewer.py)
 (`--product gobai`); its docstring covers building gridlook and uploading it.
@@ -385,8 +385,8 @@ far more than CPU — a bigger instance does not speed it up.
 
 Reconnaissance, the measured comparison against RFROM, and the resolved design
 decisions are written up in
-[`../claude/notes/gobai-nodd.md`](../claude/notes/gobai-nodd.md). The rationale
+[`../docs/design/gobai-nodd.md`](../docs/design/gobai-nodd.md). The rationale
 for each pipeline stage — why `data_vars="minimal"`, why
 `chunks={"mean_pressure": 1}` — is in
-[`../claude/notes/nodd-prep.md`](../claude/notes/nodd-prep.md) and
-[`../claude/notes/nodd-batch-script.md`](../claude/notes/nodd-batch-script.md).
+[`../docs/design/nodd-prep.md`](../docs/design/nodd-prep.md) and
+[`../docs/design/nodd-batch-script.md`](../docs/design/nodd-batch-script.md).

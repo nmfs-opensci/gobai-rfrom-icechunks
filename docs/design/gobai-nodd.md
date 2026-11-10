@@ -192,7 +192,7 @@ Same method as `o2` block 17: `python nodd.py --stream no3 --blocks 17 --no-uplo
 - **CF mapping is provisional**: `no3` currently gets `standard_name =
   moles_of_nitrate_per_unit_mass_in_sea_water`, matching this note's own proposal
   above — but that's pending Sharp's reply on the per-volume/per-mass mismatch
-  (see `claude/handoff.md`). Don't treat this validation as sign-off on the final
+  (see `agent/handoff.md`). Don't treat this validation as sign-off on the final
   CF name, only on the pipeline mechanics (chunking, bounds handling, bit-identity).
 
 Not yet run: any upload. Nothing has been written to `gs://noaa-oar-gobai`.
