@@ -151,5 +151,5 @@ The issue lists the known traps. Read `rfromv-icechunk.md` and
 - `unsafe_use_metadata` on the Icechunk storage settings is not enabled;
   `rebase_tries=0` makes failures loud instead. Revisit if commits ever fail
   for real.
-- Harness setup on the hub, including where memory lives (it is **not** backed up
-  as of 2026-11-10), is in `agent/harness-config.md`.
+- Harness setup on the hub (config, memory backing, git guard) is in
+  `agent/harness-config.md`.
